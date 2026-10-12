@@ -48,6 +48,8 @@ module.exports = async (req, res) => {
     const db = await getDb();
     const tenantsCollection = db.collection('tenants');
     await tenantsCollection.createIndex({ id: 1 }, { unique: true });
+    await tenantsCollection.createIndex({ houseNo: 1, status: 1 });
+    await tenantsCollection.createIndex({ idNumber: 1 });
 
     if (req.method === 'GET') {
       const tenants = (await tenantsCollection.find({}).sort({ createdAt: -1 }).toArray()).map(cleanTenant);
@@ -63,6 +65,8 @@ module.exports = async (req, res) => {
       if (!rentPrices[body.houseNo]) return res.status(400).json({ error: 'Unknown room' });
       const existing = await tenantsCollection.findOne({ houseNo: body.houseNo, status: 'accepted' });
       if (existing) return res.status(409).json({ error: `Room ${body.houseNo} is already occupied` });
+      const duplicateId = await tenantsCollection.findOne({ idNumber: String(body.idNumber).trim(), status: { $in: ['pending', 'accepted'] } });
+      if (duplicateId) return res.status(409).json({ error: 'An active application already exists for this ID number' });
 
       const tenant = {
         id: Date.now(),
@@ -82,9 +86,15 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'PATCH') {
-      const { id, status } = req.body || {};
-      if (!id || !['accepted', 'declined'].includes(status)) {
-        return res.status(400).json({ error: 'id and a valid status are required' });
+      const { id, status, paid } = req.body || {};
+      if (!id || (status === undefined && paid === undefined)) {
+        return res.status(400).json({ error: 'id and status or paid are required' });
+      }
+      if (status !== undefined && !['accepted', 'declined'].includes(status)) {
+        return res.status(400).json({ error: 'status must be accepted or declined' });
+      }
+      if (paid !== undefined && (!Number.isFinite(Number(paid)) || Number(paid) < 0)) {
+        return res.status(400).json({ error: 'paid must be a non-negative number' });
       }
       const tenant = await tenantsCollection.findOne({ id: Number(id) });
       if (!tenant) return res.status(404).json({ error: 'Tenant not found' });
@@ -92,7 +102,13 @@ module.exports = async (req, res) => {
         const occupied = await tenantsCollection.findOne({ houseNo: tenant.houseNo, status: 'accepted', id: { $ne: Number(id) } });
         if (occupied) return res.status(409).json({ error: `Room ${tenant.houseNo} is already occupied` });
       }
-      await tenantsCollection.updateOne({ id: Number(id) }, { $set: { status, updatedAt: new Date() } });
+      const update = { updatedAt: new Date() };
+      if (status !== undefined) update.status = status;
+      if (paid !== undefined) {
+        update.paid = Number(paid);
+        update.balance = Number(tenant.expected) - Number(paid);
+      }
+      await tenantsCollection.updateOne({ id: Number(id) }, { $set: update });
       return res.status(200).json({ ok: true });
     }
 

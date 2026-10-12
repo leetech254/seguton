@@ -2,6 +2,17 @@
 
 A browser-based rental and tenant management system.
 
+## Included features
+
+- Tenant registration with room availability and rent-balance calculations
+- MongoDB persistence through Vercel serverless functions, with localStorage fallback
+- Management dashboard with occupancy, pending approvals, collections, and outstanding balances
+- Search and status filters for tenant applications
+- Accept/decline workflow with duplicate ID and occupied-room protection
+- Payment updates for accepted tenants
+- Excel reporting for tenant records and summaries
+- Responsive interface with sync-status feedback
+
 ## Deploy to Vercel with MongoDB
 
 1. Create a MongoDB Atlas cluster and allow Vercel to connect to it.
@@ -18,5 +29,6 @@ The app automatically uses the API when those variables are configured. If the A
 - `GET /api/data` — returns tenants and calculated room occupancy
 - `POST /api/data` — creates a pending tenant application
 - `PATCH /api/data` with `{ "id": 123, "status": "accepted" | "declined" }` — updates an application
+- `PATCH /api/data` with `{ "id": 123, "paid": 5000 }` — records a tenant payment and recalculates the balance
 
 Never commit `MONGODB_URI` or other secrets to the repository.

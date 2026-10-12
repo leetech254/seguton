@@ -72,6 +72,7 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
 .btn-accept{background:#27ae60; color:white;}.btn-decline{background:#e74c3c; color:white;}
 .btn-report{background:#f1c40f; color:#000; padding:10px 18px; border:none; border-radius:8px; font-weight:bold; cursor:pointer;}
 .status-msg{text-align:center; margin-top:10px; font-weight:bold;}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:15px}.toolbar input,.toolbar select{width:auto;min-width:180px}.toolbar button{padding:10px 14px;border:0;border-radius:8px;background:#2c3e50;color:white;font-weight:600;cursor:pointer}.sync-status{font-size:13px;color:#667085;margin-left:auto}.empty-state{text-align:center;color:#667085;padding:25px}.btn-payment{background:#3498db;color:white}
 </style>
 </head>
 <body>
@@ -141,6 +142,7 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
       <div class="stat"><h3 id="availRooms">0</h3><p>Available</p></div>
       <div class="stat"><h3 id="occRooms">0</h3><p>Occupied</p></div>
       <div class="stat"><h3 id="pendingCount">0</h3><p>Pending Approval</p></div>
+      <div class="stat"><h3 id="overdueTotal">Ksh 0</h3><p>Balance Owed</p></div>
       <div class="stat"><h3 id="totalCollected">Ksh 0</h3><p>Collected</p></div>
     </div>
 
@@ -151,6 +153,14 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
 
     <div class="panel">
       <h2>📋 Tenant Applications</h2>
+      <div class="toolbar">
+        <input id="tenantSearch" type="search" placeholder="Search name, ID or room" oninput="renderManagement()">
+        <select id="statusFilter" onchange="renderManagement()">
+          <option value="all">All statuses</option><option value="pending">Pending</option><option value="accepted">Accepted</option><option value="declined">Declined</option>
+        </select>
+        <button onclick="syncFromDatabase()">↻ Refresh data</button>
+        <span id="syncStatus" class="sync-status">Local data mode</span>
+      </div>
       <div style="overflow:auto;">
         <table>
           <thead>
@@ -182,14 +192,18 @@ async function apiRequest(method, body){
   return response.json();
 }
 async function syncFromDatabase(){
+  const statusNode = document.getElementById('syncStatus');
+  if(statusNode) statusNode.innerText = 'Syncing…';
   try{
     const data = await apiRequest('GET');
     tenants = data.tenants || [];
     rooms = data.rooms || rooms;
     save();
     renderManagement();
+    if(statusNode) statusNode.innerText = `MongoDB synced ${new Date().toLocaleTimeString()}`;
   }catch(error){
     console.info('MongoDB API unavailable; using local browser storage.', error.message);
+    if(statusNode) statusNode.innerText = 'Local data mode';
   }
 }
 
@@ -225,6 +239,10 @@ document.getElementById('tenantForm').addEventListener('submit', async (e)=>{
 
   const expected = rentPrices[houseNo];
   const paid = parseFloat(document.getElementById('amountPaid').value);
+  if(!Number.isFinite(paid) || paid < 0){
+    alert('Enter a valid non-negative payment amount.');
+    return;
+  }
 
   const tenant = {
     name: document.getElementById('name').value,
@@ -256,6 +274,18 @@ document.getElementById('tenantForm').addEventListener('submit', async (e)=>{
 });
 
 // Management Render
+function escapeHtml(value){
+  return String(value ?? '').replace(/[&<>\"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[character]));
+}
+function recordPayment(id){
+  const tenant = tenants.find(t=>t.id===id);
+  if(!tenant) return;
+  const value = prompt(`Enter total amount paid by ${tenant.name}:`, tenant.paid || 0);
+  if(value === null) return;
+  const paid = Number(value);
+  if(!Number.isFinite(paid) || paid < 0){ alert('Enter a valid non-negative amount.'); return; }
+  apiRequest('PATCH', {id, paid}).then(syncFromDatabase).catch(error=>alert(error.message));
+}
 function renderManagement(){
   // Rooms
   const grid = document.getElementById('roomGrid');
