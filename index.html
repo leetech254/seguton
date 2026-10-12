@@ -159,7 +159,7 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
           <option value="all">All statuses</option><option value="pending">Pending</option><option value="accepted">Accepted</option><option value="declined">Declined</option>
         </select>
         <button onclick="syncFromDatabase()">↻ Refresh data</button>
-        <span id="syncStatus" class="sync-status">Local data mode</span>
+        <span id="syncStatus" class="sync-status">MongoDB required</span>
       </div>
       <div style="overflow:auto;">
         <table>
@@ -175,13 +175,8 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
 
 <script>
 const rentPrices = {"S1":9480,"S4":18740,"S5":4740,"A1":4500,"B1":9440,"B2":10320,"B3":4740,"B4":5360,"B5":18220,"B6":4500,"B7":4620,"B8":9240,"B9":18000,"C1":51280};
-let tenants = JSON.parse(localStorage.getItem('seguton_tenants') || '[]');
-let rooms = JSON.parse(localStorage.getItem('seguton_rooms') || JSON.stringify(Object.keys(rentPrices).map(r=>({id:r, type:r.startsWith('S')?'Rooms':'Rooms', status:'available', tenant:''}))));
-
-function save(){
-  localStorage.setItem('seguton_tenants', JSON.stringify(tenants));
-  localStorage.setItem('seguton_rooms', JSON.stringify(rooms));
-}
+let tenants = [];
+let rooms = [];
 async function apiRequest(method, body){
   const response = await fetch('/api/data', {
     method,
@@ -197,13 +192,21 @@ async function syncFromDatabase(){
   try{
     const data = await apiRequest('GET');
     tenants = data.tenants || [];
-    rooms = data.rooms || rooms;
-    save();
+    rooms = data.rooms || [];
     renderManagement();
-    if(statusNode) statusNode.innerText = `MongoDB synced ${new Date().toLocaleTimeString()}`;
+    if(statusNode){
+      statusNode.innerText = `MongoDB synced ${new Date().toLocaleTimeString()}`;
+      statusNode.style.color = '#198754';
+    }
   }catch(error){
-    console.info('MongoDB API unavailable; using local browser storage.', error.message);
-    if(statusNode) statusNode.innerText = 'Local data mode';
+    console.error('MongoDB unavailable:', error);
+    tenants = [];
+    rooms = [];
+    renderManagement();
+    if(statusNode){
+      statusNode.innerText = 'Database unavailable — no local data';
+      statusNode.style.color = '#c0392b';
+    }
   }
 }
 
@@ -260,13 +263,14 @@ document.getElementById('tenantForm').addEventListener('submit', async (e)=>{
       tenants = latest.tenants || tenants;
       rooms = latest.rooms || rooms;
     }catch(error){
-      console.info('Saved to MongoDB, but refresh failed.', error.message);
+      console.warn('MongoDB write succeeded but refresh failed.', error.message);
     }
   }catch(error){
-    tenants.push({...tenant, id: Date.now(), balance: expected-paid, status:'pending', timestamp:new Date().toLocaleString()});
+    document.getElementById('tenantStatus').innerText = `❌ ${error.message}`;
+    document.getElementById('tenantStatus').style.color='crimson';
+    return;
   }
-  save();
-  document.getElementById('tenantStatus').innerText = '✅ Sent to management for approval!';
+  document.getElementById('tenantStatus').innerText = '✅ Saved to MongoDB and sent for approval!';
   document.getElementById('tenantStatus').style.color='green';
   e.target.reset();
   document.getElementById('dateEntered').valueAsDate = new Date();
@@ -287,33 +291,30 @@ function recordPayment(id){
   apiRequest('PATCH', {id, paid}).then(syncFromDatabase).catch(error=>alert(error.message));
 }
 function renderManagement(){
-  // Rooms
   const grid = document.getElementById('roomGrid');
-  grid.innerHTML = '';
-  let avail=0, occ=0;
-  rooms.forEach(r=>{
-    if(r.status==='available') avail++; else occ++;
-    grid.innerHTML += `<div class="room ${r.status}">${r.id}<br><small>${r.type}</small><br>${r.status==='available'?'✅ Available':'👤 '+r.tenant}<br><small>Ksh ${rentPrices[r.id]}</small></div>`;
-  });
+  grid.innerHTML = rooms.length ? rooms.map(r=>`<div class="room ${r.status}">${escapeHtml(r.id)}<br><small>${escapeHtml(r.type)}</small><br>${r.status==='available'?'✅ Available':'👤 '+escapeHtml(r.tenant)}<br><small>Ksh ${Number(rentPrices[r.id]||0).toLocaleString()}</small></div>`).join('') : '<div class="empty-state">Connect MongoDB to load room data.</div>';
+  const avail = rooms.filter(r=>r.status==='available').length;
+  const occ = rooms.filter(r=>r.status==='occupied').length;
   document.getElementById('totalRooms').innerText = rooms.length;
   document.getElementById('availRooms').innerText = avail;
   document.getElementById('occRooms').innerText = occ;
   document.getElementById('pendingCount').innerText = tenants.filter(t=>t.status==='pending').length;
-  document.getElementById('totalCollected').innerText = 'Ksh ' + tenants.filter(t=>t.status==='accepted').reduce((s,t)=>s+t.paid,0);
-
-  // Table
+  const acceptedTenants = tenants.filter(t=>t.status==='accepted');
+  document.getElementById('totalCollected').innerText = 'Ksh ' + acceptedTenants.reduce((sum,t)=>sum+Number(t.paid||0),0).toLocaleString();
+  document.getElementById('overdueTotal').innerText = 'Ksh ' + acceptedTenants.reduce((sum,t)=>sum+Math.max(0,Number(t.balance||0)),0).toLocaleString();
   const tbody = document.getElementById('tenantTable');
-  tbody.innerHTML = '';
-  [...tenants].reverse().forEach(t=>{
-    tbody.innerHTML += `<tr>
-      <td>${t.name}</td><td>${t.idNumber}</td><td>${t.houseNo}</td><td>${t.dateEntered}</td>
-      <td>${t.expected}</td><td>${t.paid}</td><td style="color:${t.balance>0?'red':'green'}">${t.balance}</td>
-      <td><span class="badge ${t.status}">${t.status}</span></td>
-      <td>
-        ${t.status==='pending'? `<button class="btn-small btn-accept" onclick="approveTenant(${t.id})">Accept</button><button class="btn-small btn-decline" onclick="declineTenant(${t.id})">Decline</button>` : '-'}
-      </td>
-    </tr>`;
+  const search = (document.getElementById('tenantSearch')?.value || '').toLowerCase().trim();
+  const status = document.getElementById('statusFilter')?.value || 'all';
+  const visibleTenants = [...tenants].reverse().filter(t=>{
+    const matchesSearch = !search || [t.name,t.idNumber,t.houseNo].some(value=>String(value||'').toLowerCase().includes(search));
+    return matchesSearch && (status==='all' || t.status===status);
   });
+  tbody.innerHTML = visibleTenants.length ? visibleTenants.map(t=>`<tr>
+    <td>${escapeHtml(t.name)}</td><td>${escapeHtml(t.idNumber)}</td><td>${escapeHtml(t.houseNo)}</td><td>${escapeHtml(t.dateEntered)}</td>
+    <td>${Number(t.expected||0).toLocaleString()}</td><td>${Number(t.paid||0).toLocaleString()}</td><td style="color:${t.balance>0?'red':'green'}">${Number(t.balance||0).toLocaleString()}</td>
+    <td><span class="badge ${t.status}">${t.status}</span></td>
+    <td>${t.status==='pending'?`<button class="btn-small btn-accept" onclick="approveTenant(${t.id})">Accept</button><button class="btn-small btn-decline" onclick="declineTenant(${t.id})">Decline</button>`:t.status==='accepted'?`<button class="btn-small btn-payment" onclick="recordPayment(${t.id})">Record payment</button>`:'-'}</td>
+  </tr>`).join('') : '<tr><td colspan="9" class="empty-state">No database records match your filters.</td></tr>';
 }
 
 async function approveTenant(id){
@@ -326,9 +327,9 @@ async function approveTenant(id){
     tenants = latest.tenants || tenants;
     rooms = latest.rooms || rooms;
   }catch(error){
-    t.status='accepted'; room.status='occupied'; room.tenant=t.name;
+    alert(error.message);
   }
-  save(); renderManagement();
+  renderManagement();
 }
 async function declineTenant(id){
   try{
@@ -337,9 +338,9 @@ async function declineTenant(id){
     tenants = latest.tenants || tenants;
     rooms = latest.rooms || rooms;
   }catch(error){
-    tenants.find(x=>x.id===id).status='declined';
+    alert(error.message);
   }
-  save(); renderManagement();
+  renderManagement();
 }
 
 function generateReport(){

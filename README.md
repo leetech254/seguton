@@ -5,7 +5,7 @@ A browser-based rental and tenant management system.
 ## Included features
 
 - Tenant registration with room availability and rent-balance calculations
-- MongoDB persistence through Vercel serverless functions, with localStorage fallback
+- MongoDB-only persistence through Vercel serverless functions; no browser localStorage is used
 - Management dashboard with occupancy, pending approvals, collections, and outstanding balances
 - Search and status filters for tenant applications
 - Accept/decline workflow with duplicate ID and occupied-room protection
@@ -22,7 +22,7 @@ A browser-based rental and tenant management system.
    - `MONGODB_DB`: database name, for example `seguton`
 4. Deploy. The static app is served from `index.html`; `/api/data` is the MongoDB-backed serverless endpoint.
 
-The app automatically uses the API when those variables are configured. If the API is unavailable, it falls back to browser `localStorage`, so local UI testing still works.
+The app requires the API and MongoDB environment variables. If the database is unavailable, the UI shows an error and does not save data locally.
 
 ## API
 
