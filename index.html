@@ -172,6 +172,26 @@ function save(){
   localStorage.setItem('seguton_tenants', JSON.stringify(tenants));
   localStorage.setItem('seguton_rooms', JSON.stringify(rooms));
 }
+async function apiRequest(method, body){
+  const response = await fetch('/api/data', {
+    method,
+    headers: {'Content-Type':'application/json'},
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if(!response.ok) throw new Error((await response.json()).error || 'API request failed');
+  return response.json();
+}
+async function syncFromDatabase(){
+  try{
+    const data = await apiRequest('GET');
+    tenants = data.tenants || [];
+    rooms = data.rooms || rooms;
+    save();
+    renderManagement();
+  }catch(error){
+    console.info('MongoDB API unavailable; using local browser storage.', error.message);
+  }
+}
 
 function showPage(pageId){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -197,7 +217,7 @@ function updateBalance(){
 document.getElementById('dateEntered').valueAsDate = new Date();
 
 // Tenant Submit
-document.getElementById('tenantForm').addEventListener('submit', (e)=>{
+document.getElementById('tenantForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
   const houseNo = document.getElementById('houseNo').value;
   const roomObj = rooms.find(r=>r.id===houseNo);
@@ -206,18 +226,27 @@ document.getElementById('tenantForm').addEventListener('submit', (e)=>{
   const expected = rentPrices[houseNo];
   const paid = parseFloat(document.getElementById('amountPaid').value);
 
-  tenants.push({
-    id: Date.now(),
+  const tenant = {
     name: document.getElementById('name').value,
     idNumber: document.getElementById('idNumber').value,
     houseNo: houseNo,
     dateEntered: document.getElementById('dateEntered').value,
     expected: expected,
-    paid: paid,
-    balance: expected-paid,
-    status: 'pending',
-    timestamp: new Date().toLocaleString()
-  });
+    paid: paid
+  };
+  try{
+    const result = await apiRequest('POST', tenant);
+    tenants.push(result.tenant);
+    try{
+      const latest = await apiRequest('GET');
+      tenants = latest.tenants || tenants;
+      rooms = latest.rooms || rooms;
+    }catch(error){
+      console.info('Saved to MongoDB, but refresh failed.', error.message);
+    }
+  }catch(error){
+    tenants.push({...tenant, id: Date.now(), balance: expected-paid, status:'pending', timestamp:new Date().toLocaleString()});
+  }
   save();
   document.getElementById('tenantStatus').innerText = '✅ Sent to management for approval!';
   document.getElementById('tenantStatus').style.color='green';
@@ -257,15 +286,29 @@ function renderManagement(){
   });
 }
 
-function approveTenant(id){
+async function approveTenant(id){
   const t = tenants.find(x=>x.id===id);
   const room = rooms.find(r=>r.id===t.houseNo);
   if(room.status==='occupied'){ alert('Room already occupied!'); return; }
-  t.status='accepted'; room.status='occupied'; room.tenant=t.name;
+  try{
+    await apiRequest('PATCH', {id, status:'accepted'});
+    const latest = await apiRequest('GET');
+    tenants = latest.tenants || tenants;
+    rooms = latest.rooms || rooms;
+  }catch(error){
+    t.status='accepted'; room.status='occupied'; room.tenant=t.name;
+  }
   save(); renderManagement();
 }
-function declineTenant(id){
-  tenants.find(x=>x.id===id).status='declined';
+async function declineTenant(id){
+  try{
+    await apiRequest('PATCH', {id, status:'declined'});
+    const latest = await apiRequest('GET');
+    tenants = latest.tenants || tenants;
+    rooms = latest.rooms || rooms;
+  }catch(error){
+    tenants.find(x=>x.id===id).status='declined';
+  }
   save(); renderManagement();
 }
 
@@ -289,6 +332,7 @@ function generateReport(){
 }
 
 renderManagement();
+syncFromDatabase();
 </script>
 </body>
   </html>
