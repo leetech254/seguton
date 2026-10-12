@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2c3e50">
+<script>
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js');
+}
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SEGUTON ESTATE - Management System</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box; font-family:'Segoe UI', sans-serif; margin:0; padding:0;}
+body{min-height:100vh; transition:0.5s;}
+.nav{
+  position:fixed; top:0; left:0; right:0; z-index:100;
+  background:rgba(0,0,0,0.85); backdrop-filter:blur(10px);
+  display:flex; justify-content:space-between; align-items:center;
+  padding:12px 20px; color:white;
+}
+.nav h2{color:#f1c40f; letter-spacing:1px;}
+.nav-links{display:flex; gap:10px;}
+.nav-links button{
+  padding:9px 18px; border:none; border-radius:20px; font-weight:bold;
+  cursor:pointer; background:#444; color:white;
+}
+.nav-links button.active{background:#f1c40f; color:#000;}
+.page{display:none; min-height:100vh; padding:80px 20px 20px; align-items:center; justify-content:center;}
+.page.active{display:flex;}
+
+/* TENANT PAGE */
+#tenantPage{
+  background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.7)), url('https://images.unsplash.com/photo-1560518883-ce09059eeffa?q=80&w=2000') center/cover fixed;
+}
+#managePage{
+  background: linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.8)), url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=2000') center/cover fixed;
+  flex-direction:column; align-items:stretch;
+}
+.card{
+  background:rgba(255,255,255,0.95); backdrop-filter:blur(8px);
+  width:100%; max-width:500px; border-radius:20px;
+  padding:25px; box-shadow:0 15px 40px rgba(0,0,0,0.5);
+}
+.card h1{text-align:center; color:#2c3e50; margin-bottom:5px;}
+.card p.sub{text-align:center; color:#7f8c8d; margin-bottom:20px;}
+label{font-weight:600; color:#2c3e50; display:block; margin:10px 0 5px; font-size:14px;}
+input, select{width:100%; padding:12px; border-radius:10px; border:1.5px solid #ddd; font-size:15px;}
+.row{display:flex; gap:10px;}.row>div{flex:1;}
+.amount-box{background:#2c3e50; color:#f1c40f; padding:12px; border-radius:10px; text-align:center; margin-top:12px; font-weight:bold;}
+button.submit{width:100%; margin-top:15px; padding:14px; border:none; border-radius:12px; background:linear-gradient(135deg,#2c3e50,#f1c40f); color:white; font-weight:bold; cursor:pointer; font-size:16px;}
+
+/* MANAGEMENT */
+.manage-container{max-width:1100px; margin:0 auto; width:100%;}
+.stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:20px;}
+.stat{background:rgba(255,255,255,0.95); padding:15px; border-radius:15px; text-align:center;}
+.stat h3{font-size:28px; color:#2c3e50;}.stat p{color:#7f8c8d; font-size:13px;}
+.panel{background:rgba(255,255,255,0.96); border-radius:18px; padding:20px; margin-bottom:20px; overflow:auto;}
+.panel h2{margin-bottom:15px; color:#2c3e50; display:flex; justify-content:space-between; align-items:center;}
+.room-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px;}
+.room{padding:15px; border-radius:12px; text-align:center; font-weight:bold;}
+.room.available{background:#d4efdf; border:2px solid #27ae60; color:#145a32;}
+.room.occupied{background:#fadbd8; border:2px solid #e74c3c; color:#922b21;}
+table{width:100%; border-collapse:collapse; font-size:14px;}
+th,td{padding:10px; border-bottom:1px solid #eee; text-align:left;}
+th{background:#2c3e50; color:white; position:sticky; top:0;}
+.badge{padding:4px 10px; border-radius:15px; font-size:12px; color:white;}
+.pending{background:#f39c12;}.accepted{background:#27ae60;}.declined{background:#e74c3c;}
+.btn-small{padding:6px 10px; border:none; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; margin:2px;}
+.btn-accept{background:#27ae60; color:white;}.btn-decline{background:#e74c3c; color:white;}
+.btn-report{background:#f1c40f; color:#000; padding:10px 18px; border:none; border-radius:8px; font-weight:bold; cursor:pointer;}
+.status-msg{text-align:center; margin-top:10px; font-weight:bold;}
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <h2>🏠 SEGUTON</h2>
+  <div class="nav-links">
+    <button id="btnTenant" class="active" onclick="showPage('tenantPage')">Tenants Entry</button>
+    <button id="btnManage" onclick="showPage('managePage')">Management</button>
+  </div>
+</div>
+
+<!-- TENANTS PAGE -->
+<div id="tenantPage" class="page active">
+  <div class="card">
+    <h1>Tenant Registration</h1>
+    <p class="sub">Enter your rent details</p>
+    <form id="tenantForm">
+      <label>Full Name</label>
+      <input type="text" id="name" required placeholder="John Kiprop">
+
+      <label>ID Number</label>
+      <input type="text" id="idNumber" required placeholder="34567890">
+
+      <div class="row">
+        <div>
+          <label>Room Type</label>
+          <select id="houseNo" required onchange="updateRent()">
+            <option value="">Select Room</option>
+            <option value="S1">Room 1 - 94800</option>   
+            <option value="S4">Room 2- 18740</option>
+            <option value="S5">Room 3- 4740</option>
+            <option value="A1">Room 4- 4500</option>
+            <option value="B1">Room 5- 9440</option>
+            <option value="B2">Room 6- 10320</option>
+            <option value="B3">Room 7- 4740</option>
+            <option value="B4">Room 8- 5360</option>
+            <option value="B5">Room 9- 18220</option>
+            <option value="B6">Room 10- 4500</option>
+            <option value="B7">Room 11- 4620</option>
+            <option value="B8">Room 12- 9240</option>
+            <option value="B8">Room 13- 18000</option>
+            <option value="C1">Room 14- 51280</option>
+          </select>
+        </div>
+        <div>
+          <label>Date Entered</label>
+          <input type="date" id="dateEntered" required>
+        </div>
+      </div>
+
+      <label>Amount Paid (Ksh)</label>
+      <input type="number" id="amountPaid" required placeholder="3500" oninput="updateBalance()">
+
+      <div class="amount-box" id="calcBox">Expected: 0 | Balance: 0</div>
+      <button type="submit" class="submit">Submit for Approval</button>
+      <div class="status-msg" id="tenantStatus"></div>
+    </form>
+  </div>
+</div>
+
+<!-- MANAGEMENT PAGE -->
+<div id="managePage" class="page">
+  <div class="manage-container">
+    <div class="stats">
+      <div class="stat"><h3 id="totalRooms">7</h3><p>Total Rooms</p></div>
+      <div class="stat"><h3 id="availRooms">0</h3><p>Available</p></div>
+      <div class="stat"><h3 id="occRooms">0</h3><p>Occupied</p></div>
+      <div class="stat"><h3 id="pendingCount">0</h3><p>Pending Approval</p></div>
+      <div class="stat"><h3 id="totalCollected">Ksh 0</h3><p>Collected</p></div>
+    </div>
+
+    <div class="panel">
+      <h2>🏘️ Rooms Status - Rooms <button class="btn-report" onclick="generateReport()">📊 Generate Report Excel</button></h2>
+      <div class="room-grid" id="roomGrid"></div>
+    </div>
+
+    <div class="panel">
+      <h2>📋 Tenant Applications</h2>
+      <div style="overflow:auto;">
+        <table>
+          <thead>
+            <tr><th>Name</th><th>ID</th><th>Room</th><th>Date</th><th>Expected</th><th>Paid</th><th>Balance</th><th>Status</th><th>Action</th></tr>
+          </thead>
+          <tbody id="tenantTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const rentPrices = {"S1":9480,"S4":18740,"S5":4740,"A1":4500,"B1":9440,"B2":10320,"B3":4740,"B4":5360,"B5":18220,"B6":4500,"B7":4620,"B8":9240,"B9":18000,"C1":51280};
+let tenants = JSON.parse(localStorage.getItem('seguton_tenants') || '[]');
+let rooms = JSON.parse(localStorage.getItem('seguton_rooms') || JSON.stringify(Object.keys(rentPrices).map(r=>({id:r, type:r.startsWith('S')?'Rooms':'Rooms', status:'available', tenant:''}))));
+
+function save(){
+  localStorage.setItem('seguton_tenants', JSON.stringify(tenants));
+  localStorage.setItem('seguton_rooms', JSON.stringify(rooms));
+}
+
+function showPage(pageId){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-links button').forEach(b=>b.classList.remove('active'));
+  document.getElementById(pageId).classList.add('active');
+  if(pageId==='tenantPage') document.getElementById('btnTenant').classList.add('active');
+  else { document.getElementById('btnManage').classList.add('active'); renderManagement(); }
+}
+
+function updateRent(){
+  const room = document.getElementById('houseNo').value;
+  const expected = rentPrices[room] || 0;
+  document.getElementById('calcBox').innerText = `Expected: Ksh ${expected} | Balance: Ksh ${expected}`;
+  updateBalance();
+}
+function updateBalance(){
+  const room = document.getElementById('houseNo').value;
+  const expected = rentPrices[room] || 0;
+  const paid = parseFloat(document.getElementById('amountPaid').value) || 0;
+  document.getElementById('calcBox').innerText = `Expected: ${expected} | Paid: ${paid} | Balance: ${expected-paid}`;
+}
+
+document.getElementById('dateEntered').valueAsDate = new Date();
+
+// Tenant Submit
+document.getElementById('tenantForm').addEventListener('submit', (e)=>{
+  e.preventDefault();
+  const houseNo = document.getElementById('houseNo').value;
+  const roomObj = rooms.find(r=>r.id===houseNo);
+  if(roomObj && roomObj.status==='occupied'){ alert('Room '+houseNo+' is already occupied!'); return; }
+
+  const expected = rentPrices[houseNo];
+  const paid = parseFloat(document.getElementById('amountPaid').value);
+
+  tenants.push({
+    id: Date.now(),
+    name: document.getElementById('name').value,
+    idNumber: document.getElementById('idNumber').value,
+    houseNo: houseNo,
+    dateEntered: document.getElementById('dateEntered').value,
+    expected: expected,
+    paid: paid,
+    balance: expected-paid,
+    status: 'pending',
+    timestamp: new Date().toLocaleString()
+  });
+  save();
+  document.getElementById('tenantStatus').innerText = '✅ Sent to management for approval!';
+  document.getElementById('tenantStatus').style.color='green';
+  e.target.reset();
+  document.getElementById('dateEntered').valueAsDate = new Date();
+  setTimeout(()=>showPage('managePage'), 1200);
+});
+
+// Management Render
+function renderManagement(){
+  // Rooms
+  const grid = document.getElementById('roomGrid');
+  grid.innerHTML = '';
+  let avail=0, occ=0;
+  rooms.forEach(r=>{
+    if(r.status==='available') avail++; else occ++;
+    grid.innerHTML += `<div class="room ${r.status}">${r.id}<br><small>${r.type}</small><br>${r.status==='available'?'✅ Available':'👤 '+r.tenant}<br><small>Ksh ${rentPrices[r.id]}</small></div>`;
+  });
+  document.getElementById('totalRooms').innerText = rooms.length;
+  document.getElementById('availRooms').innerText = avail;
+  document.getElementById('occRooms').innerText = occ;
+  document.getElementById('pendingCount').innerText = tenants.filter(t=>t.status==='pending').length;
+  document.getElementById('totalCollected').innerText = 'Ksh ' + tenants.filter(t=>t.status==='accepted').reduce((s,t)=>s+t.paid,0);
+
+  // Table
+  const tbody = document.getElementById('tenantTable');
+  tbody.innerHTML = '';
+  [...tenants].reverse().forEach(t=>{
+    tbody.innerHTML += `<tr>
+      <td>${t.name}</td><td>${t.idNumber}</td><td>${t.houseNo}</td><td>${t.dateEntered}</td>
+      <td>${t.expected}</td><td>${t.paid}</td><td style="color:${t.balance>0?'red':'green'}">${t.balance}</td>
+      <td><span class="badge ${t.status}">${t.status}</span></td>
+      <td>
+        ${t.status==='pending'? `<button class="btn-small btn-accept" onclick="approveTenant(${t.id})">Accept</button><button class="btn-small btn-decline" onclick="declineTenant(${t.id})">Decline</button>` : '-'}
+      </td>
+    </tr>`;
+  });
+}
+
+function approveTenant(id){
+  const t = tenants.find(x=>x.id===id);
+  const room = rooms.find(r=>r.id===t.houseNo);
+  if(room.status==='occupied'){ alert('Room already occupied!'); return; }
+  t.status='accepted'; room.status='occupied'; room.tenant=t.name;
+  save(); renderManagement();
+}
+function declineTenant(id){
+  tenants.find(x=>x.id===id).status='declined';
+  save(); renderManagement();
+}
+
+function generateReport(){
+  if(tenants.length===0){ alert('No data'); return; }
+  const ws = XLSX.utils.json_to_sheet(tenants.map(t=>({
+    "Name":t.name, "ID":t.idNumber, "Room":t.houseNo, "Date Entered":t.dateEntered,
+    "Expected":t.expected, "Paid":t.paid, "Balance":t.balance, "Status":t.status, "Time":t.timestamp
+  })));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Tenants Report");
+  const summary = XLSX.utils.json_to_sheet([
+    {"Metric":"Total Rooms","Value":rooms.length},
+    {"Metric":"Available Single Rooms","Value":rooms.filter(r=>r.status==='available' && r.type==='Single').length},
+    {"Metric":"Occupied","Value":rooms.filter(r=>r.status==='occupied').length},
+    {"Metric":"Total Collected","Value":tenants.filter(t=>t.status==='accepted').reduce((s,t)=>s+t.paid,0)},
+    {"Metric":"Total Balance Owed","Value":tenants.filter(t=>t.status==='accepted').reduce((s,t)=>s+t.balance,0)},
+  ]);
+  XLSX.utils.book_append_sheet(wb, summary, "Summary");
+  XLSX.writeFile(wb, `SEGUTON_Report_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+renderManagement();
+</script>
+</body>
+  </html>
