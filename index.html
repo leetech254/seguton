@@ -11,7 +11,7 @@ if('serviceWorker' in navigator){
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SEGUTON ESTATE - Management System</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box; font-family:'Segoe UI', sans-serif; margin:0; padding:0;}
 body{min-height:100vh; transition:0.5s;}
@@ -27,7 +27,7 @@ body{min-height:100vh; transition:0.5s;}
   padding:9px 18px; border:none; border-radius:20px; font-weight:bold;
   cursor:pointer; background:#444; color:white;
 }
-.nav-links button.active{background:#f1c40f; color:#000;}
+.nav-links button.active{background:#f1c40f; color:#000;}.nav-links button:disabled,.submit:disabled,.hero-actions button:disabled{opacity:.65;cursor:wait}
 .page{display:none; min-height:100vh; padding:80px 20px 20px; align-items:center; justify-content:center;}
 .page.active{display:flex;}
 
@@ -165,7 +165,7 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
         <label>Administrator email</label><input type="email" id="setupEmail" required autocomplete="email" placeholder="admin@example.com">
         <label>Phone number</label><input type="tel" id="setupPhone" required autocomplete="tel" placeholder="+254 700 000 000">
         <label>Password</label><input type="password" id="setupPassword" required minlength="8" autocomplete="new-password" placeholder="At least 8 characters">
-        <button type="submit" class="submit">Create administrator account</button>
+        <button id="setupSubmit" type="submit" class="submit">Create administrator account</button>
       </form>
     </div>
     <div id="loginView" style="display:none">
@@ -174,7 +174,7 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
       <form id="loginForm">
         <label>Email</label><input type="email" id="loginEmail" required autocomplete="email" placeholder="admin@example.com">
         <label>Password</label><input type="password" id="loginPassword" required autocomplete="current-password" placeholder="Your password">
-        <button type="submit" class="submit">Sign in</button>
+        <button id="loginSubmit" type="submit" class="submit">Sign in</button>
       </form>
       <button class="muted-link" onclick="showPage('tenantPage')">Back to tenant registration</button>
     </div>
@@ -189,7 +189,7 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
       <strong id="adminIdentity" style="color:white">Administrator</strong>
       <span style="margin-left:auto"></span>
       <button onclick="toggleSettings()">Settings</button>
-      <button class="danger" onclick="logoutAdmin()">Log out</button>
+      <button id="logoutButton" class="danger" onclick="logoutAdmin()">Log out</button>
     </div>
     <div id="settingsPanel" class="panel settings-panel" style="display:none">
       <h2>Settings</h2>
@@ -251,6 +251,11 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
 const rentPrices = {"S1":9480,"S4":18740,"S5":4740,"A1":4500,"B1":9440,"B2":10320,"B3":4740,"B4":5360,"B5":18220,"B6":4500,"B7":4620,"B8":9240,"B9":18000,"C1":51280};
 let tenants = [];
 let rooms = [];
+function setButtonBusy(button, busy, label){
+  if(!button) return;
+  if(busy){ button.dataset.originalLabel=button.innerText; button.innerText=label; button.disabled=true; }
+  else { button.innerText=button.dataset.originalLabel || button.innerText; button.disabled=false; }
+}
 function showToast(message, type='error', duration=4500){
   const container=document.getElementById('toastContainer');
   if(!container) return;
@@ -308,22 +313,33 @@ function showAuthMode(setupRequired){
   setAuthMessage('');
 }
 async function openManagement(){
+  const navButton=document.getElementById('btnManage');
+  setButtonBusy(navButton,true,'Loading…');
   try{
     const auth=await authRequest('GET');
     if(auth.authenticated){
       document.getElementById('adminIdentity').innerText='Administrator • '+auth.user.email;
       showPage('managePage');
-      syncFromDatabase();
+      await syncFromDatabase();
     }else{
       showAuthMode(auth.setupRequired);
       showPage('loginPage');
     }
   }catch(error){ showAuthMode(false); setAuthMessage(error.message); showPage('loginPage'); }
+  finally{ setButtonBusy(navButton,false); }
 }
 async function logoutAdmin(){
-  try{ await authRequest('POST',{action:'logout'}); }catch(error){}
-  document.getElementById('settingsPanel').style.display='none';
-  showPage('tenantPage');
+  const button=document.getElementById('logoutButton');
+  setButtonBusy(button,true,'Logging out…');
+  try{
+    await authRequest('POST',{action:'logout'});
+    showToast('You have been logged out safely.','success');
+  }catch(error){ showToast('Logout completed locally.','info'); }
+  finally{
+    setButtonBusy(button,false);
+    document.getElementById('settingsPanel').style.display='none';
+    showPage('tenantPage');
+  }
 }
 function toggleSettings(){
   const panel=document.getElementById('settingsPanel');
@@ -355,10 +371,10 @@ async function syncFromDatabase(){
 
 function showPage(pageId){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nav-links button').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.nav-links button').forEach(b=>{b.classList.remove('active');b.removeAttribute('aria-current');});
   document.getElementById(pageId).classList.add('active');
-  if(pageId==='tenantPage') document.getElementById('btnTenant').classList.add('active');
-  if(pageId==='managePage'){ document.getElementById('btnManage').classList.add('active'); renderManagement(); }
+  if(pageId==='tenantPage'){ document.getElementById('btnTenant').classList.add('active'); document.getElementById('btnTenant').setAttribute('aria-current','page'); }
+  if(pageId==='managePage'){ document.getElementById('btnManage').classList.add('active'); document.getElementById('btnManage').setAttribute('aria-current','page'); renderManagement(); }
 }
 
 function updateRent(){
@@ -378,13 +394,17 @@ document.getElementById('dateEntered').valueAsDate = new Date();
 
 document.getElementById('setupForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
-  try{ await authRequest('POST',{action:'setup',email:setupEmail.value,phone:setupPhone.value,password:setupPassword.value}); setAuthMessage('Administrator created. Opening management…','#198754'); setTimeout(openManagement,400); }
+  const button=document.getElementById('setupSubmit'); setButtonBusy(button,true,'Creating…');
+  try{ await authRequest('POST',{action:'setup',email:document.getElementById('setupEmail').value,phone:document.getElementById('setupPhone').value,password:document.getElementById('setupPassword').value}); setAuthMessage('Administrator created. Opening management…','#198754'); setTimeout(openManagement,250); }
   catch(error){ setAuthMessage(error.message); }
+  finally{ setButtonBusy(button,false); }
 });
 document.getElementById('loginForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
-  try{ await authRequest('POST',{action:'login',email:loginEmail.value,password:loginPassword.value}); setAuthMessage('Signed in.','#198754'); setTimeout(openManagement,250); }
+  const button=document.getElementById('loginSubmit'); setButtonBusy(button,true,'Signing in…');
+  try{ await authRequest('POST',{action:'login',email:document.getElementById('loginEmail').value,password:document.getElementById('loginPassword').value}); setAuthMessage('Welcome back. Loading management…','#198754'); setTimeout(openManagement,250); }
   catch(error){ setAuthMessage(error.message); }
+  finally{ setButtonBusy(button,false); }
 });
 document.getElementById('passwordForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
