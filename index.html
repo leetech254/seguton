@@ -45,6 +45,7 @@ body{min-height:100vh; transition:0.5s;}
   padding:25px; box-shadow:0 15px 40px rgba(0,0,0,0.5);
 }
 .card h1{text-align:center; color:#2c3e50; margin-bottom:5px;}
+.landing-layout{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(360px,.75fr);gap:42px;align-items:center;width:min(1120px,100%);margin:0 auto}.hero-copy{color:#fff;max-width:620px}.hero-eyebrow{display:inline-block;background:rgba(241,196,15,.18);border:1px solid rgba(241,196,15,.55);color:#f9d55c;border-radius:30px;padding:8px 14px;font-size:13px;font-weight:700;letter-spacing:.5px;margin-bottom:18px}.hero-copy h1{font-size:clamp(38px,5vw,68px);line-height:1.04;margin-bottom:18px;letter-spacing:-1.8px}.hero-copy h1 span{color:#f1c40f}.hero-copy p{font-size:18px;line-height:1.6;color:rgba(255,255,255,.86);max-width:560px}.hero-actions{display:flex;gap:12px;flex-wrap:wrap;margin:26px 0}.hero-actions button{border:0;border-radius:12px;padding:13px 20px;font-weight:800;font-size:15px;cursor:pointer}.hero-primary{background:#f1c40f;color:#1b2631}.hero-secondary{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3)!important;color:#fff}.hero-points{display:flex;gap:18px;flex-wrap:wrap;color:rgba(255,255,255,.8);font-size:13px}.hero-points strong{display:block;color:#fff;font-size:20px;margin-bottom:2px}.landing-card{box-shadow:0 22px 60px rgba(0,0,0,.45)}.landing-card h1{font-size:27px}.landing-card .sub{line-height:1.5}.welcome-note{font-size:12px;color:#667085;text-align:center;margin-top:12px}.hero-scroll{scroll-margin-top:90px}@media(max-width:850px){.landing-layout{grid-template-columns:1fr;gap:22px;padding-top:10px}.hero-copy{max-width:680px}.hero-copy h1{font-size:42px}.hero-copy p{font-size:16px}.landing-card{max-width:560px}.page{padding-top:92px;align-items:flex-start}}@media(max-width:520px){.hero-copy h1{font-size:36px}.landing-layout{gap:16px}.card{padding:20px}.hero-points{gap:12px}}
 .card p.sub{text-align:center; color:#7f8c8d; margin-bottom:20px;}
 label{font-weight:600; color:#2c3e50; display:block; margin:10px 0 5px; font-size:14px;}
 input, select{width:100%; padding:12px; border-radius:10px; border:1.5px solid #ddd; font-size:15px;}
@@ -89,7 +90,22 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
 
 <!-- TENANTS PAGE -->
 <div id="tenantPage" class="page active">
-  <div class="card">
+  <div class="landing-layout">
+    <section class="hero-copy">
+      <div class="hero-eyebrow">A simpler way to manage your stay</div>
+      <h1>Find your place at <span>SEGUTON</span>.</h1>
+      <p>Submit your tenant details, choose an available room, and keep your rent information organized in one secure place.</p>
+      <div class="hero-actions">
+        <button class="hero-primary" onclick="document.getElementById('registrationCard').scrollIntoView({behavior:'smooth',block:'center'})">Start registration</button>
+        <button class="hero-secondary" onclick="openManagement()">Management login</button>
+      </div>
+      <div class="hero-points">
+        <div><strong>14</strong>managed rooms</div>
+        <div><strong>24/7</strong>online applications</div>
+        <div><strong>Secure</strong>database records</div>
+      </div>
+    </section>
+    <div id="registrationCard" class="card landing-card hero-scroll">
     <h1>Tenant Registration</h1>
     <p class="sub">Enter your rent details</p>
     <form id="tenantForm">
@@ -133,6 +149,8 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
       <button type="submit" class="submit">Submit for Approval</button>
       <div class="status-msg" id="tenantStatus"></div>
     </form>
+      <p class="welcome-note">Your application is reviewed by estate management.</p>
+    </div>
   </div>
 </div>
 
