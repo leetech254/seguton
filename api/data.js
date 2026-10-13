@@ -10,8 +10,8 @@ let databasePromise;
 let initializationPromise;
 
 async function getDatabase() {
-  const uri = process.env.MONGODB_URI;
-  if (!uri) throw new Error('MONGODB_URI is not configured in Vercel');
+  const uri = process.env.MONGODB_URI || process.env.MONGODB_URL || process.env.MONGO_URI;
+  if (!uri) throw new Error('MONGODB_URI is not configured in Vercel. Add MONGODB_URI in the deployed environment.');
   if (!databasePromise) {
     const client = new MongoClient(uri, {
       serverSelectionTimeoutMS: 10000,
@@ -161,7 +161,8 @@ module.exports = async (req, res) => {
     console.error('SEGUTON API error:', error);
     const message = error.message || 'Unknown database error';
     return res.status(500).json({
-      error: message.includes('MONGODB_URI') ? message : 'MongoDB connection failed. Verify MONGODB_URI, MONGODB_DB, Atlas network access, and database permissions.'
+      error: message.includes('MONGODB_URI') ? message : 'MongoDB connection failed. Verify MONGODB_URI, MONGODB_DB, Atlas network access, and database permissions.',
+      hint: 'Redeploy after changing Vercel environment variables. Atlas Network Access must allow the deployed Vercel function.'
     });
   }
 };

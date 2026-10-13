@@ -193,7 +193,7 @@ async function apiRequest(method, body){
     }
     throw new Error('The API returned an invalid response.');
   }
-  if(!response.ok) throw new Error(payload.error || `API request failed (${response.status})`);
+  if(!response.ok) throw new Error(payload.error ? `${payload.error}${payload.hint ? ` ${payload.hint}` : ''}` : `API request failed (${response.status})`);
   if(!contentType.includes('application/json')) throw new Error('The API did not return JSON. Redeploy the latest Vercel configuration.');
   return payload;
 }
