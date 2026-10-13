@@ -72,12 +72,13 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
 .btn-accept{background:#27ae60; color:white;}.btn-decline{background:#e74c3c; color:white;}
 .btn-report{background:#f1c40f; color:#000; padding:10px 18px; border:none; border-radius:8px; font-weight:bold; cursor:pointer;}
 .status-msg{text-align:center; margin-top:10px; font-weight:bold;}
-.auth-card{max-width:460px}.auth-card .submit{margin-top:10px}.muted-link{background:none;border:0;color:#2c3e50;text-decoration:underline;cursor:pointer;margin:12px auto 0;display:block}.settings-panel{max-width:560px;margin:0 auto 18px}.danger{background:#e74c3c!important;color:#fff!important}
+.auth-card{max-width:460px}.auth-card .submit{margin-top:10px}.muted-link{background:none;border:0;color:#2c3e50;text-decoration:underline;cursor:pointer;margin:12px auto 0;display:block}.settings-panel{max-width:560px;margin:0 auto 18px}.danger{background:#e74c3c!important;color:#fff!important}.toast-container{position:fixed;right:20px;bottom:20px;z-index:9999;display:flex;flex-direction:column;gap:10px;max-width:min(380px,calc(100vw - 40px))}.toast{padding:14px 16px;border-radius:10px;color:white;box-shadow:0 8px 25px rgba(0,0,0,.25);font-weight:600;animation:toast-in .2s ease-out}.toast.error{background:#c0392b}.toast.success{background:#198754}.toast.info{background:#2c3e50}@keyframes toast-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:15px}.toolbar input,.toolbar select{width:auto;min-width:180px}.toolbar button{padding:10px 14px;border:0;border-radius:8px;background:#2c3e50;color:white;font-weight:600;cursor:pointer}.sync-status{font-size:13px;color:#667085;margin-left:auto}.empty-state{text-align:center;color:#667085;padding:25px}.btn-payment{background:#3498db;color:white}
 </style>
 </head>
 <body>
 
+<div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div>
 <div class="nav">
   <h2>🏠 SEGUTON</h2>
   <div class="nav-links">
@@ -232,6 +233,13 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
 const rentPrices = {"S1":9480,"S4":18740,"S5":4740,"A1":4500,"B1":9440,"B2":10320,"B3":4740,"B4":5360,"B5":18220,"B6":4500,"B7":4620,"B8":9240,"B9":18000,"C1":51280};
 let tenants = [];
 let rooms = [];
+function showToast(message, type='error', duration=4500){
+  const container=document.getElementById('toastContainer');
+  if(!container) return;
+  const toast=document.createElement('div'); toast.className=`toast ${type}`; toast.textContent=message;
+  container.appendChild(toast);
+  setTimeout(()=>{toast.style.opacity='0';toast.style.transition='opacity .2s';setTimeout(()=>toast.remove(),220);}, duration);
+}
 async function apiRequest(method, body, endpoint='/api/data'){
   const response = await fetch(endpoint, {
     method,
@@ -259,6 +267,7 @@ async function loadPublicRooms(){
     const select=document.getElementById('houseNo');
     select.innerHTML='<option value="">Select Room</option>'+rooms.map(room=>`<option value="${room.id}" ${room.status==='occupied'?'disabled':''}>${room.id} - Ksh ${Number(room.rent||0).toLocaleString()}${room.status==='occupied'?' (Occupied)':''}</option>`).join('');
   }catch(error){
+    showToast(error.message,'error');
     document.getElementById('tenantStatus').innerText=`❌ ${error.message}`;
     document.getElementById('tenantStatus').style.color='crimson';
   }
@@ -273,6 +282,7 @@ async function authRequest(method, body){
 }
 function setAuthMessage(message, color='crimson'){
   const node=document.getElementById('authStatus'); if(node){node.innerText=message;node.style.color=color;}
+  if(message) showToast(message, color==='#198754'?'success':'error');
 }
 function showAuthMode(setupRequired){
   document.getElementById('setupView').style.display=setupRequired?'block':'none';
@@ -361,20 +371,20 @@ document.getElementById('loginForm').addEventListener('submit', async (e)=>{
 document.getElementById('passwordForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
   const status=document.getElementById('passwordStatus');
-  if(newPassword.value!==confirmPassword.value){ status.innerText='New passwords do not match.'; status.style.color='crimson'; return; }
-  try{ await authRequest('POST',{action:'change-password',currentPassword:currentPassword.value,newPassword:newPassword.value}); status.innerText='Password changed successfully.'; status.style.color='#198754'; e.target.reset(); }
-  catch(error){ status.innerText=error.message; status.style.color='crimson'; }
+  if(newPassword.value!==confirmPassword.value){ status.innerText='New passwords do not match.'; status.style.color='crimson'; showToast(status.innerText); return; }
+  try{ await authRequest('POST',{action:'change-password',currentPassword:currentPassword.value,newPassword:newPassword.value}); status.innerText='Password changed successfully.'; status.style.color='#198754'; showToast(status.innerText,'success'); e.target.reset(); }
+  catch(error){ status.innerText=error.message; status.style.color='crimson'; showToast(error.message); }
 });
 document.getElementById('deleteAccountForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
   const status=document.getElementById('deleteStatus');
-  if(document.getElementById('deleteConfirmation').value!=='DELETE'){ status.innerText='Type DELETE exactly to confirm.'; status.style.color='crimson'; return; }
+  if(document.getElementById('deleteConfirmation').value!=='DELETE'){ status.innerText='Type DELETE exactly to confirm.'; status.style.color='crimson'; showToast(status.innerText); return; }
   if(!confirm('Delete the administrator account? Tenant and room records will be preserved.')) return;
   try{
     await authRequest('POST',{action:'delete-account',password:document.getElementById('deletePassword').value,confirmation:document.getElementById('deleteConfirmation').value});
-    alert('Administrator account deleted. Tenant and room records were preserved.');
+    showToast('Administrator account deleted. Tenant and room records were preserved.','success');
     showPage('tenantPage');
-  }catch(error){ status.innerText=error.message; status.style.color='crimson'; }
+  }catch(error){ status.innerText=error.message; status.style.color='crimson'; showToast(error.message); }
 });
 
 // Tenant Submit
@@ -382,17 +392,18 @@ document.getElementById('tenantForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
   const houseNo = document.getElementById('houseNo').value;
   if(!rooms.length){
+    showToast('MongoDB is not connected; no rooms are available.');
     document.getElementById('tenantStatus').innerText = '❌ MongoDB is not connected; no rooms are available.';
     document.getElementById('tenantStatus').style.color='crimson';
     return;
   }
   const roomObj = rooms.find(r=>r.id===houseNo);
-  if(roomObj && roomObj.status==='occupied'){ alert('Room '+houseNo+' is already occupied!'); return; }
+  if(roomObj && roomObj.status==='occupied'){ showToast('Room '+houseNo+' is already occupied.'); return; }
 
   const expected = rentPrices[houseNo];
   const paid = parseFloat(document.getElementById('amountPaid').value);
   if(!Number.isFinite(paid) || paid < 0){
-    alert('Enter a valid non-negative payment amount.');
+    showToast('Enter a valid non-negative payment amount.');
     return;
   }
 
@@ -415,10 +426,12 @@ document.getElementById('tenantForm').addEventListener('submit', async (e)=>{
       console.warn('MongoDB write succeeded but refresh failed.', error.message);
     }
   }catch(error){
+    showToast(error.message);
     document.getElementById('tenantStatus').innerText = `❌ ${error.message}`;
     document.getElementById('tenantStatus').style.color='crimson';
     return;
   }
+  showToast('Application saved and sent for approval.','success');
   document.getElementById('tenantStatus').innerText = '✅ Saved to MongoDB and sent for approval!';
   document.getElementById('tenantStatus').style.color='green';
   e.target.reset();
@@ -436,8 +449,8 @@ function recordPayment(id){
   const value = prompt(`Enter total amount paid by ${tenant.name}:`, tenant.paid || 0);
   if(value === null) return;
   const paid = Number(value);
-  if(!Number.isFinite(paid) || paid < 0){ alert('Enter a valid non-negative amount.'); return; }
-  apiRequest('PATCH', {id, paid}).then(syncFromDatabase).catch(error=>alert(error.message));
+  if(!Number.isFinite(paid) || paid < 0){ showToast('Enter a valid non-negative amount.'); return; }
+  apiRequest('PATCH', {id, paid}).then(()=>{showToast('Payment updated.','success'); return syncFromDatabase();}).catch(error=>showToast(error.message));
 }
 function renderManagement(){
   const grid = document.getElementById('roomGrid');
@@ -470,15 +483,15 @@ async function approveTenant(id){
   const t = tenants.find(x=>x.id===id);
   if(!t) return;
   const room = rooms.find(r=>r.id===t.houseNo);
-  if(!room){ alert('Room data is not loaded from MongoDB. Refresh and try again.'); return; }
-  if(room.status==='occupied'){ alert('Room already occupied!'); return; }
+  if(!room){ showToast('Room data is not loaded from MongoDB. Refresh and try again.'); return; }
+  if(room.status==='occupied'){ showToast('Room already occupied.'); return; }
   try{
     await apiRequest('PATCH', {id, status:'accepted'});
     const latest = await apiRequest('GET');
     tenants = latest.tenants || tenants;
     rooms = latest.rooms || rooms;
   }catch(error){
-    alert(error.message);
+    showToast(error.message);
   }
   renderManagement();
 }
@@ -489,13 +502,13 @@ async function declineTenant(id){
     tenants = latest.tenants || tenants;
     rooms = latest.rooms || rooms;
   }catch(error){
-    alert(error.message);
+    showToast(error.message);
   }
   renderManagement();
 }
 
 function generateReport(){
-  if(tenants.length===0){ alert('No data'); return; }
+  if(tenants.length===0){ showToast('No tenant data to export.'); return; }
   const ws = XLSX.utils.json_to_sheet(tenants.map(t=>({
     "Name":t.name, "ID":t.idNumber, "Room":t.houseNo, "Date Entered":t.dateEntered,
     "Expected":t.expected, "Paid":t.paid, "Balance":t.balance, "Status":t.status, "Time":t.timestamp
