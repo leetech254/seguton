@@ -55,6 +55,6 @@ module.exports = async (req, res) => {
     return res.status(405).json({ error: 'Method not allowed.' });
   } catch (error) {
     console.error('SEGUTON data error:', error);
-    return res.status(500).json({ error: 'Database or authentication service is unavailable. Check MongoDB, SESSION_SECRET, Atlas access, and permissions.' });
+    return res.status(500).json({ error: 'Database or authentication service is unavailable. Check the database connection, SESSION_SECRET, network access, and permissions.' });
   }
 };

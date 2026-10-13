@@ -175,7 +175,7 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
     </div>
     <div id="settingsPanel" class="panel settings-panel" style="display:none">
       <h2>Settings</h2>
-      <p class="sub">Change the administrator password. Your email and phone remain stored securely in MongoDB.</p>
+      <p class="sub">Change the administrator password. Your email and phone remain stored securely in the database.</p>
       <form id="passwordForm">
         <label>Current password</label><input type="password" id="currentPassword" required autocomplete="current-password">
         <label>New password</label><input type="password" id="newPassword" required minlength="8" autocomplete="new-password">
@@ -185,7 +185,7 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
       </form>
       <hr style="margin:24px 0;border:0;border-top:1px solid #ddd">
       <h3 style="color:#c0392b">Delete administrator account</h3>
-      <p class="sub">This removes only the administrator login. Tenant and room records remain in MongoDB. You can create a new administrator account later.</p>
+      <p class="sub">This removes only the administrator login. Tenant and room records remain in the database. You can create a new administrator account later.</p>
       <form id="deleteAccountForm">
         <label>Current password</label><input type="password" id="deletePassword" required autocomplete="current-password">
         <label>Type DELETE to confirm</label><input type="text" id="deleteConfirmation" required autocomplete="off" placeholder="DELETE">
@@ -215,7 +215,7 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
           <option value="all">All statuses</option><option value="pending">Pending</option><option value="accepted">Accepted</option><option value="declined">Declined</option>
         </select>
         <button onclick="syncFromDatabase()">↻ Refresh data</button>
-        <span id="syncStatus" class="sync-status">MongoDB required</span>
+        <span id="syncStatus" class="sync-status">Database required</span>
       </div>
       <div style="overflow:auto;">
         <table>
@@ -324,12 +324,12 @@ async function syncFromDatabase(){
       statusNode.style.color = '#198754';
     }
   }catch(error){
-    console.error('MongoDB unavailable:', error);
+    console.error('Database unavailable:', error);
     tenants = [];
     rooms = [];
     renderManagement();
     if(statusNode){
-      statusNode.innerText = `MongoDB error: ${error.message}`;
+      statusNode.innerText = `Database error: ${error.message}`;
       statusNode.style.color = '#c0392b';
     }
   }
@@ -392,8 +392,8 @@ document.getElementById('tenantForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
   const houseNo = document.getElementById('houseNo').value;
   if(!rooms.length){
-    showToast('MongoDB is not connected; no rooms are available.');
-    document.getElementById('tenantStatus').innerText = '❌ MongoDB is not connected; no rooms are available.';
+    showToast('Database is not connected; no rooms are available.');
+    document.getElementById('tenantStatus').innerText = '❌ Database is not connected; no rooms are available.';
     document.getElementById('tenantStatus').style.color='crimson';
     return;
   }
@@ -423,7 +423,7 @@ document.getElementById('tenantForm').addEventListener('submit', async (e)=>{
       tenants = latest.tenants || tenants;
       rooms = latest.rooms || rooms;
     }catch(error){
-      console.warn('MongoDB write succeeded but refresh failed.', error.message);
+      console.warn('Database write succeeded but refresh failed.', error.message);
     }
   }catch(error){
     showToast(error.message);
@@ -432,7 +432,7 @@ document.getElementById('tenantForm').addEventListener('submit', async (e)=>{
     return;
   }
   showToast('Application saved and sent for approval.','success');
-  document.getElementById('tenantStatus').innerText = '✅ Saved to MongoDB and sent for approval!';
+  document.getElementById('tenantStatus').innerText = '✅ Saved to the database and sent for approval!';
   document.getElementById('tenantStatus').style.color='green';
   e.target.reset();
   document.getElementById('dateEntered').valueAsDate = new Date();
@@ -454,7 +454,7 @@ function recordPayment(id){
 }
 function renderManagement(){
   const grid = document.getElementById('roomGrid');
-  grid.innerHTML = rooms.length ? rooms.map(r=>`<div class="room ${r.status}">${escapeHtml(r.id)}<br><small>${escapeHtml(r.type)}</small><br>${r.status==='available'?'✅ Available':'👤 '+escapeHtml(r.tenant)}<br><small>Ksh ${Number(r.rent || rentPrices[r.id] || 0).toLocaleString()}</small></div>`).join('') : '<div class="empty-state">No rooms were returned by MongoDB. Refresh after checking the database connection.</div>';
+  grid.innerHTML = rooms.length ? rooms.map(r=>`<div class="room ${r.status}">${escapeHtml(r.id)}<br><small>${escapeHtml(r.type)}</small><br>${r.status==='available'?'✅ Available':'👤 '+escapeHtml(r.tenant)}<br><small>Ksh ${Number(r.rent || rentPrices[r.id] || 0).toLocaleString()}</small></div>`).join('') : '<div class="empty-state">No rooms were returned by the database. Refresh after checking the database connection.</div>';
   const avail = rooms.filter(r=>r.status==='available').length;
   const occ = rooms.filter(r=>r.status==='occupied').length;
   document.getElementById('totalRooms').innerText = rooms.length;
@@ -483,7 +483,7 @@ async function approveTenant(id){
   const t = tenants.find(x=>x.id===id);
   if(!t) return;
   const room = rooms.find(r=>r.id===t.houseNo);
-  if(!room){ showToast('Room data is not loaded from MongoDB. Refresh and try again.'); return; }
+  if(!room){ showToast('Room data is not loaded from the database. Refresh and try again.'); return; }
   if(room.status==='occupied'){ showToast('Room already occupied.'); return; }
   try{
     await apiRequest('PATCH', {id, status:'accepted'});

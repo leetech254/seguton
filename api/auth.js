@@ -73,6 +73,6 @@ module.exports = async (req, res) => {
     return res.status(400).json({ error: 'Unknown authentication action.' });
   } catch (error) {
     console.error('SEGUTON auth error:', error);
-    return res.status(500).json({ error: error.message.includes('SESSION_SECRET') ? error.message : 'Authentication service is unavailable. Check MongoDB and SESSION_SECRET.' });
+    return res.status(500).json({ error: error.message.includes('SESSION_SECRET') ? error.message : 'Authentication service is unavailable. Check the database connection and SESSION_SECRET.' });
   }
 };
