@@ -112,8 +112,9 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
       <label>Full Name</label>
       <input type="text" id="name" required placeholder="John Kiprop">
 
-      <label>ID Number</label>
-      <input type="text" id="idNumber" required inputmode="numeric" pattern="[0-9]{6,12}" placeholder="12345678" title="Enter 6 to 12 digits">
+      <label>Kenyan National ID Number</label>
+      <input type="text" id="idNumber" required inputmode="numeric" minlength="8" maxlength="8" pattern="[0-9]{8}" placeholder="12345678" title="Enter exactly 8 digits, for example 12345678">
+      <small class="field-help">Use the 8-digit number printed on your Kenyan National ID card.</small>
 
       <label>Phone Number</label>
       <input type="tel" id="phone" required inputmode="tel" autocomplete="tel" placeholder="+254 712 345 678 or 0712 345 678" pattern="(?:\+254|0)[17][0-9\s-]{8,}" title="Use +254 7xx xxx xxx, +254 1xx xxx xxx, 07xx xxx xxx or 01xx xxx xxx">
@@ -553,7 +554,7 @@ async function declineTenant(id){
 function generateReport(){
   if(tenants.length===0){ showToast('No tenant data to export.'); return; }
   const ws = XLSX.utils.json_to_sheet(tenants.map(t=>({
-    "Name":t.name, "ID":t.idNumber, "Room":t.houseNo, "Date Entered":t.dateEntered,
+    "Name":t.name, "ID":t.idNumber, "Phone":t.phone || "", "Room":t.houseNo, "Date Entered":t.dateEntered,
     "Expected":t.expected, "Paid":t.paid, "Balance":t.balance, "Status":t.status, "Time":t.timestamp
   })));
   const wb = XLSX.utils.book_new();
