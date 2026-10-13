@@ -45,7 +45,7 @@ body{min-height:100vh; transition:0.5s;}
   padding:25px; box-shadow:0 15px 40px rgba(0,0,0,0.5);
 }
 .card h1{text-align:center; color:#2c3e50; margin-bottom:5px;}
-.landing-layout{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(360px,.75fr);gap:42px;align-items:center;width:min(1120px,100%);margin:0 auto}.hero-copy{color:#fff;max-width:620px}.hero-eyebrow{display:inline-block;background:rgba(241,196,15,.18);border:1px solid rgba(241,196,15,.55);color:#f9d55c;border-radius:30px;padding:8px 14px;font-size:13px;font-weight:700;letter-spacing:.5px;margin-bottom:18px}.hero-copy h1{font-size:clamp(38px,5vw,68px);line-height:1.04;margin-bottom:18px;letter-spacing:-1.8px}.hero-copy h1 span{color:#f1c40f}.hero-copy p{font-size:18px;line-height:1.6;color:rgba(255,255,255,.86);max-width:560px}.hero-actions{display:flex;gap:12px;flex-wrap:wrap;margin:26px 0}.hero-actions button{border:0;border-radius:12px;padding:13px 20px;font-weight:800;font-size:15px;cursor:pointer}.hero-primary{background:#f1c40f;color:#1b2631}.hero-secondary{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3)!important;color:#fff}.hero-points{display:flex;gap:18px;flex-wrap:wrap;color:rgba(255,255,255,.8);font-size:13px}.hero-points strong{display:block;color:#fff;font-size:20px;margin-bottom:2px}.landing-card{box-shadow:0 22px 60px rgba(0,0,0,.45)}.landing-card h1{font-size:27px}.landing-card .sub{line-height:1.5}.welcome-note{font-size:12px;color:#667085;text-align:center;margin-top:12px}.hero-scroll{scroll-margin-top:90px}@media(max-width:850px){.landing-layout{grid-template-columns:1fr;gap:22px;padding-top:10px}.hero-copy{max-width:680px}.hero-copy h1{font-size:42px}.hero-copy p{font-size:16px}.landing-card{max-width:560px}.page{padding-top:92px;align-items:flex-start}}@media(max-width:520px){.hero-copy h1{font-size:36px}.landing-layout{gap:16px}.card{padding:20px}.hero-points{gap:12px}}
+.landing-layout{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(360px,.75fr);gap:42px;align-items:center;width:min(1120px,100%);margin:0 auto}.hero-copy{color:#fff;max-width:620px}.hero-eyebrow{display:inline-block;background:rgba(241,196,15,.18);border:1px solid rgba(241,196,15,.55);color:#f9d55c;border-radius:30px;padding:8px 14px;font-size:13px;font-weight:700;letter-spacing:.5px;margin-bottom:18px}.hero-copy h1{font-size:clamp(38px,5vw,68px);line-height:1.04;margin-bottom:18px;letter-spacing:-1.8px}.hero-copy h1 span{color:#f1c40f}.hero-copy p{font-size:18px;line-height:1.6;color:rgba(255,255,255,.86);max-width:560px}.hero-actions{display:flex;gap:12px;flex-wrap:wrap;margin:26px 0}.hero-actions button{border:0;border-radius:12px;padding:13px 20px;font-weight:800;font-size:15px;cursor:pointer}.hero-primary{background:#f1c40f;color:#1b2631}.hero-secondary{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3)!important;color:#fff}.hero-points{display:flex;gap:18px;flex-wrap:wrap;color:rgba(255,255,255,.8);font-size:13px}.hero-points strong{display:block;color:#fff;font-size:20px;margin-bottom:2px}.landing-card{box-shadow:0 22px 60px rgba(0,0,0,.45)}.landing-card h1{font-size:27px}.landing-card .sub{line-height:1.5}.field-help{display:block;color:#667085;font-size:12px;margin-top:-10px;margin-bottom:14px}.welcome-note{font-size:12px;color:#667085;text-align:center;margin-top:12px}.hero-scroll{scroll-margin-top:90px}@media(max-width:850px){.landing-layout{grid-template-columns:1fr;gap:22px;padding-top:10px}.hero-copy{max-width:680px}.hero-copy h1{font-size:42px}.hero-copy p{font-size:16px}.landing-card{max-width:560px}.page{padding-top:92px;align-items:flex-start}}@media(max-width:520px){.hero-copy h1{font-size:36px}.landing-layout{gap:16px}.card{padding:20px}.hero-points{gap:12px}}
 .card p.sub{text-align:center; color:#7f8c8d; margin-bottom:20px;}
 label{font-weight:600; color:#2c3e50; display:block; margin:10px 0 5px; font-size:14px;}
 input, select{width:100%; padding:12px; border-radius:10px; border:1.5px solid #ddd; font-size:15px;}
@@ -113,27 +113,16 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
       <input type="text" id="name" required placeholder="John Kiprop">
 
       <label>ID Number</label>
-      <input type="text" id="idNumber" required placeholder="34567890">
+      <input type="text" id="idNumber" required inputmode="numeric" pattern="[0-9]{6,12}" placeholder="12345678" title="Enter 6 to 12 digits">
+
+      <label>Phone Number</label>
+      <input type="tel" id="phone" required inputmode="tel" autocomplete="tel" placeholder="+254 712 345 678 or 0712 345 678" pattern="(?:\+254|0)[17][0-9\s-]{8,}" title="Use +254 7xx xxx xxx, +254 1xx xxx xxx, 07xx xxx xxx or 01xx xxx xxx">
 
       <div class="row">
         <div>
           <label>Room Type</label>
           <select id="houseNo" required onchange="updateRent()">
             <option value="">Select Room</option>
-            <option value="S1">Room 1 - 4500</option>   
-            <option value="S4">Room 2- 4500</option>
-            <option value="S5">Room 3- 4500</option>
-            <option value="A1">Room 4- 4500</option>
-            <option value="B1">Room 5- 4500</option>
-            <option value="B2">Room 6- 4500</option>
-            <option value="B3">Room 7- 4500</option>
-            <option value="B4">Room 8- 4500</option>
-            <option value="B5">Room 9- 4500</option>
-            <option value="B6">Room 10- 4500</option>
-            <option value="B7">Room 11- 4500</option>
-            <option value="B8">Room 12- 4500</option>
-            <option value="B9">Room 13- 4500</option>
-            <option value="C1">Room 14- 7000</option>
           </select>
         </div>
         <div>
@@ -143,7 +132,8 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
       </div>
 
       <label>Amount Paid (Ksh)</label>
-      <input type="number" id="amountPaid" required placeholder="3500" oninput="updateBalance()">
+      <input type="number" id="amountPaid" required readonly placeholder="Select a room to auto-fill" aria-describedby="paymentHelp">
+      <small id="paymentHelp" class="field-help">Automatically filled with the selected room amount.</small>
 
       <div class="amount-box" id="calcBox">Expected: 0 | Balance: 0</div>
       <button type="submit" class="submit">Submit for Approval</button>
@@ -238,7 +228,7 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
       <div style="overflow:auto;">
         <table>
           <thead>
-            <tr><th>Name</th><th>ID</th><th>Room</th><th>Date</th><th>Expected</th><th>Paid</th><th>Balance</th><th>Status</th><th>Action</th></tr>
+            <tr><th>Name</th><th>ID</th><th>Phone</th><th>Room</th><th>Date</th><th>Expected</th><th>Paid</th><th>Balance</th><th>Status</th><th>Action</th></tr>
           </thead>
           <tbody id="tenantTable"></tbody>
         </table>
@@ -288,7 +278,7 @@ async function loadPublicRooms(){
     const data=await apiRequest('GET',undefined,'/api/data?view=rooms');
     rooms=data.rooms || [];
     const select=document.getElementById('houseNo');
-    select.innerHTML='<option value="">Select Room</option>'+rooms.map(room=>`<option value="${room.id}" ${room.status==='occupied'?'disabled':''}>${room.id} - Ksh ${Number(room.rent||0).toLocaleString()}${room.status==='occupied'?' (Occupied)':''}</option>`).join('');
+    select.innerHTML='<option value="">Select Room</option>'+rooms.filter(room=>room.status!=='occupied').map(room=>`<option value="${room.id}">${room.id} - Ksh ${Number(room.rent||0).toLocaleString()}</option>`).join('');
   }catch(error){
     showToast(error.message,'error');
     document.getElementById('tenantStatus').innerText=`❌ ${error.message}`;
@@ -377,17 +367,27 @@ function showPage(pageId){
   if(pageId==='managePage'){ document.getElementById('btnManage').classList.add('active'); document.getElementById('btnManage').setAttribute('aria-current','page'); renderManagement(); }
 }
 
-function updateRent(){
+function selectedRoomRent(){
   const room = document.getElementById('houseNo').value;
-  const expected = rentPrices[room] || 0;
-  document.getElementById('calcBox').innerText = `Expected: Ksh ${expected} | Balance: Ksh ${expected}`;
-  updateBalance();
+  const roomRecord = rooms.find(item=>item.id===room);
+  return Number(roomRecord?.rent || rentPrices[room] || 0);
+}
+function updateRent(){
+  const expected = selectedRoomRent();
+  const paidInput=document.getElementById('amountPaid');
+  paidInput.value = expected || '';
+  document.getElementById('calcBox').innerText = `Expected: Ksh ${expected.toLocaleString()} | Paid: Ksh ${expected.toLocaleString()} | Balance: Ksh 0`;
 }
 function updateBalance(){
-  const room = document.getElementById('houseNo').value;
-  const expected = rentPrices[room] || 0;
+  const expected = selectedRoomRent();
   const paid = parseFloat(document.getElementById('amountPaid').value) || 0;
-  document.getElementById('calcBox').innerText = `Expected: ${expected} | Paid: ${paid} | Balance: ${expected-paid}`;
+  document.getElementById('calcBox').innerText = `Expected: Ksh ${expected.toLocaleString()} | Paid: Ksh ${paid.toLocaleString()} | Balance: Ksh ${(expected-paid).toLocaleString()}`;
+}
+function normalizePhone(value){
+  const compact=String(value||'').replace(/[\s-]/g,'');
+  if(/^0[17]\d{8}$/.test(compact)) return '+254'+compact.slice(1);
+  if(/^\+254[17]\d{8}$/.test(compact)) return compact;
+  return null;
 }
 
 document.getElementById('dateEntered').valueAsDate = new Date();
@@ -438,16 +438,19 @@ document.getElementById('tenantForm').addEventListener('submit', async (e)=>{
   const roomObj = rooms.find(r=>r.id===houseNo);
   if(roomObj && roomObj.status==='occupied'){ showToast('Room '+houseNo+' is already occupied.'); return; }
 
-  const expected = rentPrices[houseNo];
+  const expected = selectedRoomRent();
   const paid = parseFloat(document.getElementById('amountPaid').value);
+  const phone = normalizePhone(document.getElementById('phone').value);
+  if(!phone){ showToast('Enter a valid Kenyan phone number using +254 7xx/1xx or 07xx/01xx.'); return; }
   if(!Number.isFinite(paid) || paid < 0){
-    showToast('Enter a valid non-negative payment amount.');
+    showToast('Select a room so the payment amount can be filled automatically.');
     return;
   }
 
   const tenant = {
     name: document.getElementById('name').value,
     idNumber: document.getElementById('idNumber').value,
+    phone,
     houseNo: houseNo,
     dateEntered: document.getElementById('dateEntered').value,
     expected: expected,
@@ -474,6 +477,8 @@ document.getElementById('tenantForm').addEventListener('submit', async (e)=>{
   document.getElementById('tenantStatus').style.color='green';
   e.target.reset();
   document.getElementById('dateEntered').valueAsDate = new Date();
+  document.getElementById('amountPaid').value = '';
+  document.getElementById('calcBox').innerText = 'Expected: 0 | Balance: 0';
   setTimeout(()=>showPage('managePage'), 1200);
 });
 
@@ -506,15 +511,15 @@ function renderManagement(){
   const search = (document.getElementById('tenantSearch')?.value || '').toLowerCase().trim();
   const status = document.getElementById('statusFilter')?.value || 'all';
   const visibleTenants = [...tenants].reverse().filter(t=>{
-    const matchesSearch = !search || [t.name,t.idNumber,t.houseNo].some(value=>String(value||'').toLowerCase().includes(search));
+    const matchesSearch = !search || [t.name,t.idNumber,t.phone,t.houseNo].some(value=>String(value||'').toLowerCase().includes(search));
     return matchesSearch && (status==='all' || t.status===status);
   });
   tbody.innerHTML = visibleTenants.length ? visibleTenants.map(t=>`<tr>
-    <td>${escapeHtml(t.name)}</td><td>${escapeHtml(t.idNumber)}</td><td>${escapeHtml(t.houseNo)}</td><td>${escapeHtml(t.dateEntered)}</td>
+    <td>${escapeHtml(t.name)}</td><td>${escapeHtml(t.idNumber)}</td><td>${escapeHtml(t.phone || '-')}</td><td>${escapeHtml(t.houseNo)}</td><td>${escapeHtml(t.dateEntered)}</td>
     <td>${Number(t.expected||0).toLocaleString()}</td><td>${Number(t.paid||0).toLocaleString()}</td><td style="color:${t.balance>0?'red':'green'}">${Number(t.balance||0).toLocaleString()}</td>
     <td><span class="badge ${t.status}">${t.status}</span></td>
     <td>${t.status==='pending'?`<button class="btn-small btn-accept" onclick="approveTenant(${t.id})">Accept</button><button class="btn-small btn-decline" onclick="declineTenant(${t.id})">Decline</button>`:t.status==='accepted'?`<button class="btn-small btn-payment" onclick="recordPayment(${t.id})">Record payment</button>`:'-'}</td>
-  </tr>`).join('') : '<tr><td colspan="9" class="empty-state">No database records match your filters.</td></tr>';
+  </tr>`).join('') : '<tr><td colspan="10" class="empty-state">No database records match your filters.</td></tr>';
 }
 
 async function approveTenant(id){

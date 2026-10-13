@@ -18,6 +18,7 @@ A browser-based rental and tenant management system.
 - Password-confirmed administrator account deletion with explicit `DELETE` confirmation; tenant and room records are preserved
 - Non-blocking toast notifications for API errors, validation failures, authentication, payments, and successful actions
 - Faster first paint with deferred reporting-library loading, request loading states, disabled duplicate-submit protection, and accessible active navigation
+- Tenant registration collects normalized Kenyan phone numbers, auto-fills the full room payment, and only shows available rooms
 
 ## Deploy to Vercel with a Database
 

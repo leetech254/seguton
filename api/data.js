@@ -25,14 +25,16 @@ module.exports = async (req, res) => {
 
     if (req.method === 'POST') {
       const body = req.body || {};
-      const required = ['name', 'idNumber', 'houseNo', 'dateEntered', 'expected', 'paid'];
+      const required = ['name', 'idNumber', 'phone', 'houseNo', 'dateEntered', 'expected', 'paid'];
       if (required.some((field) => body[field] === undefined || body[field] === '')) return res.status(400).json({ error: 'All tenant fields are required.' });
       if (!Object.prototype.hasOwnProperty.call(ROOM_DEFINITIONS, body.houseNo)) return res.status(400).json({ error: 'Unknown room.' });
       const expected = Number(body.expected); const paid = Number(body.paid);
+      const phone = String(body.phone).replace(/[\s-]/g, '');
+      if (!/^(?:\+254|0)[17]\d{8}$/.test(phone)) return res.status(400).json({ error: 'Enter a valid Kenyan phone number using +254 7xx/1xx or 07xx/01xx.' });
       if (!Number.isFinite(expected) || !Number.isFinite(paid) || paid < 0) return res.status(400).json({ error: 'Expected rent and payment must be valid numbers.' });
       if (await tenants.findOne({ houseNo: body.houseNo, status: 'accepted' })) return res.status(409).json({ error: `Room ${body.houseNo} is already occupied.` });
       if (await tenants.findOne({ idNumber: String(body.idNumber).trim(), status: { $in: ['pending', 'accepted'] } })) return res.status(409).json({ error: 'An active application already exists for this ID number.' });
-      const tenant = { id: Date.now(), name: String(body.name).trim(), idNumber: String(body.idNumber).trim(), houseNo: body.houseNo, dateEntered: body.dateEntered, expected, paid, balance: expected - paid, status: 'pending', timestamp: new Date().toLocaleString(), createdAt: new Date() };
+      const tenant = { id: Date.now(), name: String(body.name).trim(), idNumber: String(body.idNumber).trim(), phone: phone.startsWith('0') ? '+254' + phone.slice(1) : phone, houseNo: body.houseNo, dateEntered: body.dateEntered, expected, paid, balance: expected - paid, status: 'pending', timestamp: new Date().toLocaleString(), createdAt: new Date() };
       await tenants.insertOne(tenant);
       return res.status(201).json({ tenant: cleanTenant(tenant) });
     }
