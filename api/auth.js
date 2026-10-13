@@ -59,6 +59,17 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true });
     }
 
+    if (body.action === 'delete-account') {
+      if (!requireAdmin(req, res)) return;
+      if (body.confirmation !== 'DELETE') return res.status(400).json({ error: 'Type DELETE to confirm account removal.' });
+      const current = readSession(req);
+      const admin = await admins.findOne({ email: current.email });
+      if (!admin || !await verifyPassword(String(body.password || ''), admin.passwordHash)) return res.status(401).json({ error: 'Password is incorrect.' });
+      await admins.deleteOne({ _id: admin._id });
+      clearSession(res);
+      return res.status(200).json({ ok: true, message: 'Administrator account deleted. Tenant and room records were preserved.' });
+    }
+
     return res.status(400).json({ error: 'Unknown authentication action.' });
   } catch (error) {
     console.error('SEGUTON auth error:', error);

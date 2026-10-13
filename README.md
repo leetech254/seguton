@@ -15,6 +15,7 @@ A browser-based rental and tenant management system.
 - One-time administrator account setup with email, phone number, and password
 - Secure management login with HTTP-only sessions and hashed passwords
 - Settings tab for changing the administrator password
+- Password-confirmed administrator account deletion with explicit `DELETE` confirmation; tenant and room records are preserved
 
 ## Deploy to Vercel with MongoDB
 

@@ -182,6 +182,15 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
         <button type="submit" class="submit">Change password</button>
         <div id="passwordStatus" class="status-msg"></div>
       </form>
+      <hr style="margin:24px 0;border:0;border-top:1px solid #ddd">
+      <h3 style="color:#c0392b">Delete administrator account</h3>
+      <p class="sub">This removes only the administrator login. Tenant and room records remain in MongoDB. You can create a new administrator account later.</p>
+      <form id="deleteAccountForm">
+        <label>Current password</label><input type="password" id="deletePassword" required autocomplete="current-password">
+        <label>Type DELETE to confirm</label><input type="text" id="deleteConfirmation" required autocomplete="off" placeholder="DELETE">
+        <button type="submit" class="submit danger">Delete administrator account</button>
+        <div id="deleteStatus" class="status-msg"></div>
+      </form>
     </div>
     <div class="stats">
       <div class="stat"><h3 id="totalRooms">14</h3><p>Total Rooms</p></div>
@@ -355,6 +364,17 @@ document.getElementById('passwordForm').addEventListener('submit', async (e)=>{
   if(newPassword.value!==confirmPassword.value){ status.innerText='New passwords do not match.'; status.style.color='crimson'; return; }
   try{ await authRequest('POST',{action:'change-password',currentPassword:currentPassword.value,newPassword:newPassword.value}); status.innerText='Password changed successfully.'; status.style.color='#198754'; e.target.reset(); }
   catch(error){ status.innerText=error.message; status.style.color='crimson'; }
+});
+document.getElementById('deleteAccountForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const status=document.getElementById('deleteStatus');
+  if(document.getElementById('deleteConfirmation').value!=='DELETE'){ status.innerText='Type DELETE exactly to confirm.'; status.style.color='crimson'; return; }
+  if(!confirm('Delete the administrator account? Tenant and room records will be preserved.')) return;
+  try{
+    await authRequest('POST',{action:'delete-account',password:document.getElementById('deletePassword').value,confirmation:document.getElementById('deleteConfirmation').value});
+    alert('Administrator account deleted. Tenant and room records were preserved.');
+    showPage('tenantPage');
+  }catch(error){ status.innerText=error.message; status.style.color='crimson'; }
 });
 
 // Tenant Submit
