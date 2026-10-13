@@ -20,13 +20,13 @@ A browser-based rental and tenant management system.
 3. Add these Vercel environment variables for the relevant environments:
    - `MONGODB_URI`: MongoDB Atlas connection string
    - `MONGODB_DB`: database name, for example `seguton`
-4. Deploy. The static app is served from `index.html`; `/api/data` is the MongoDB-backed serverless endpoint.
+4. Deploy. The static app is served from `index.html`; `/api/data` is the MongoDB-backed serverless endpoint. On the first successful request, it creates/updates the `rooms` collection with all 14 rooms.
 
 The app requires the API and MongoDB environment variables. If the database is unavailable, the UI shows an error and does not save data locally.
 
 ## API
 
-- `GET /api/data` — returns tenants and calculated room occupancy
+- `GET /api/data` — connects to MongoDB, automatically seeds the full 14-room catalog, and returns tenants plus room occupancy
 - `POST /api/data` — creates a pending tenant application
 - `PATCH /api/data` with `{ "id": 123, "status": "accepted" | "declined" }` — updates an application
 - `PATCH /api/data` with `{ "id": 123, "paid": 5000 }` — records a tenant payment and recalculates the balance

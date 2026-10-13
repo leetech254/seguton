@@ -195,7 +195,7 @@ async function syncFromDatabase(){
     rooms = data.rooms || [];
     renderManagement();
     if(statusNode){
-      statusNode.innerText = `MongoDB synced ${new Date().toLocaleTimeString()}`;
+      statusNode.innerText = `MongoDB connected • ${data.roomCount || data.rooms?.length || 0} rooms loaded • ${new Date().toLocaleTimeString()}`;
       statusNode.style.color = '#198754';
     }
   }catch(error){
@@ -204,7 +204,7 @@ async function syncFromDatabase(){
     rooms = [];
     renderManagement();
     if(statusNode){
-      statusNode.innerText = 'Database unavailable — no local data';
+      statusNode.innerText = `MongoDB error: ${error.message}`;
       statusNode.style.color = '#c0392b';
     }
   }
@@ -237,6 +237,11 @@ document.getElementById('dateEntered').valueAsDate = new Date();
 document.getElementById('tenantForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
   const houseNo = document.getElementById('houseNo').value;
+  if(!rooms.length){
+    document.getElementById('tenantStatus').innerText = '❌ MongoDB is not connected; no rooms are available.';
+    document.getElementById('tenantStatus').style.color='crimson';
+    return;
+  }
   const roomObj = rooms.find(r=>r.id===houseNo);
   if(roomObj && roomObj.status==='occupied'){ alert('Room '+houseNo+' is already occupied!'); return; }
 
@@ -292,7 +297,7 @@ function recordPayment(id){
 }
 function renderManagement(){
   const grid = document.getElementById('roomGrid');
-  grid.innerHTML = rooms.length ? rooms.map(r=>`<div class="room ${r.status}">${escapeHtml(r.id)}<br><small>${escapeHtml(r.type)}</small><br>${r.status==='available'?'✅ Available':'👤 '+escapeHtml(r.tenant)}<br><small>Ksh ${Number(rentPrices[r.id]||0).toLocaleString()}</small></div>`).join('') : '<div class="empty-state">Connect MongoDB to load room data.</div>';
+  grid.innerHTML = rooms.length ? rooms.map(r=>`<div class="room ${r.status}">${escapeHtml(r.id)}<br><small>${escapeHtml(r.type)}</small><br>${r.status==='available'?'✅ Available':'👤 '+escapeHtml(r.tenant)}<br><small>Ksh ${Number(r.rent || rentPrices[r.id] || 0).toLocaleString()}</small></div>`).join('') : '<div class="empty-state">No rooms were returned by MongoDB. Refresh after checking the database connection.</div>';
   const avail = rooms.filter(r=>r.status==='available').length;
   const occ = rooms.filter(r=>r.status==='occupied').length;
   document.getElementById('totalRooms').innerText = rooms.length;
@@ -319,7 +324,9 @@ function renderManagement(){
 
 async function approveTenant(id){
   const t = tenants.find(x=>x.id===id);
+  if(!t) return;
   const room = rooms.find(r=>r.id===t.houseNo);
+  if(!room){ alert('Room data is not loaded from MongoDB. Refresh and try again.'); return; }
   if(room.status==='occupied'){ alert('Room already occupied!'); return; }
   try{
     await apiRequest('PATCH', {id, status:'accepted'});
