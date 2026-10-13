@@ -12,6 +12,9 @@ A browser-based rental and tenant management system.
 - Payment updates for accepted tenants
 - Excel reporting for tenant records and summaries
 - Responsive interface with sync-status feedback
+- One-time administrator account setup with email, phone number, and password
+- Secure management login with HTTP-only sessions and hashed passwords
+- Settings tab for changing the administrator password
 
 ## Deploy to Vercel with MongoDB
 
@@ -20,6 +23,7 @@ A browser-based rental and tenant management system.
 3. Add these Vercel environment variables for the relevant environments:
    - `MONGODB_URI`: MongoDB Atlas connection string
    - `MONGODB_DB`: database name, for example `seguton`
+   - `SESSION_SECRET`: a random secret of at least 32 characters for secure administrator sessions
 
    The primary variable name must be exactly `MONGODB_URI`. The API also accepts `MONGODB_URL` and `MONGO_URI` for compatibility, but `MONGODB_URI` is recommended. Environment variables must be enabled for Production, and the project must be redeployed after changes.
 4. Deploy. The static app is served from `index.html`; `/api/data` is the MongoDB-backed serverless endpoint. Do not add a catch-all rewrite in the Vercel dashboard; Vercel natively routes the root `api/` directory to Functions. On the first successful request, it creates/updates the `rooms` collection with all 14 rooms.
@@ -32,5 +36,7 @@ The app requires the API and MongoDB environment variables. If the database is u
 - `POST /api/data` — creates a pending tenant application
 - `PATCH /api/data` with `{ "id": 123, "status": "accepted" | "declined" }` — updates an application
 - `PATCH /api/data` with `{ "id": 123, "paid": 5000 }` — records a tenant payment and recalculates the balance
+- `/api/auth` — one-time administrator setup, login, logout, session status, and password changes
+- `GET /api/data?view=rooms` — public room catalog for tenant registration; tenant records require administrator login
 
 Never commit `MONGODB_URI` or other secrets to the repository.

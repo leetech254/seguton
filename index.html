@@ -72,6 +72,7 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
 .btn-accept{background:#27ae60; color:white;}.btn-decline{background:#e74c3c; color:white;}
 .btn-report{background:#f1c40f; color:#000; padding:10px 18px; border:none; border-radius:8px; font-weight:bold; cursor:pointer;}
 .status-msg{text-align:center; margin-top:10px; font-weight:bold;}
+.auth-card{max-width:460px}.auth-card .submit{margin-top:10px}.muted-link{background:none;border:0;color:#2c3e50;text-decoration:underline;cursor:pointer;margin:12px auto 0;display:block}.settings-panel{max-width:560px;margin:0 auto 18px}.danger{background:#e74c3c!important;color:#fff!important}
 .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:15px}.toolbar input,.toolbar select{width:auto;min-width:180px}.toolbar button{padding:10px 14px;border:0;border-radius:8px;background:#2c3e50;color:white;font-weight:600;cursor:pointer}.sync-status{font-size:13px;color:#667085;margin-left:auto}.empty-state{text-align:center;color:#667085;padding:25px}.btn-payment{background:#3498db;color:white}
 </style>
 </head>
@@ -81,7 +82,7 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
   <h2>🏠 SEGUTON</h2>
   <div class="nav-links">
     <button id="btnTenant" class="active" onclick="showPage('tenantPage')">Tenants Entry</button>
-    <button id="btnManage" onclick="showPage('managePage')">Management</button>
+    <button id="btnManage" onclick="openManagement()">Management</button>
   </div>
 </div>
 
@@ -114,7 +115,7 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
             <option value="B6">Room 10- 4500</option>
             <option value="B7">Room 11- 4620</option>
             <option value="B8">Room 12- 9240</option>
-            <option value="B8">Room 13- 18000</option>
+            <option value="B9">Room 13- 18000</option>
             <option value="C1">Room 14- 51280</option>
           </select>
         </div>
@@ -134,11 +135,56 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
   </div>
 </div>
 
+
+<!-- ADMIN LOGIN / FIRST-TIME SETUP -->
+<div id="loginPage" class="page">
+  <div class="card auth-card">
+    <div id="setupView">
+      <h1>Create Administrator</h1>
+      <p class="sub">One-time setup for the estate management account</p>
+      <form id="setupForm">
+        <label>Administrator email</label><input type="email" id="setupEmail" required autocomplete="email" placeholder="admin@example.com">
+        <label>Phone number</label><input type="tel" id="setupPhone" required autocomplete="tel" placeholder="+254 700 000 000">
+        <label>Password</label><input type="password" id="setupPassword" required minlength="8" autocomplete="new-password" placeholder="At least 8 characters">
+        <button type="submit" class="submit">Create administrator account</button>
+      </form>
+    </div>
+    <div id="loginView" style="display:none">
+      <h1>Management Login</h1>
+      <p class="sub">Sign in to manage rooms, tenants and payments</p>
+      <form id="loginForm">
+        <label>Email</label><input type="email" id="loginEmail" required autocomplete="email" placeholder="admin@example.com">
+        <label>Password</label><input type="password" id="loginPassword" required autocomplete="current-password" placeholder="Your password">
+        <button type="submit" class="submit">Sign in</button>
+      </form>
+      <button class="muted-link" onclick="showPage('tenantPage')">Back to tenant registration</button>
+    </div>
+    <div class="status-msg" id="authStatus"></div>
+  </div>
+</div>
+
 <!-- MANAGEMENT PAGE -->
 <div id="managePage" class="page">
   <div class="manage-container">
+    <div class="toolbar">
+      <strong id="adminIdentity" style="color:white">Administrator</strong>
+      <span style="margin-left:auto"></span>
+      <button onclick="toggleSettings()">Settings</button>
+      <button class="danger" onclick="logoutAdmin()">Log out</button>
+    </div>
+    <div id="settingsPanel" class="panel settings-panel" style="display:none">
+      <h2>Settings</h2>
+      <p class="sub">Change the administrator password. Your email and phone remain stored securely in MongoDB.</p>
+      <form id="passwordForm">
+        <label>Current password</label><input type="password" id="currentPassword" required autocomplete="current-password">
+        <label>New password</label><input type="password" id="newPassword" required minlength="8" autocomplete="new-password">
+        <label>Confirm new password</label><input type="password" id="confirmPassword" required minlength="8" autocomplete="new-password">
+        <button type="submit" class="submit">Change password</button>
+        <div id="passwordStatus" class="status-msg"></div>
+      </form>
+    </div>
     <div class="stats">
-      <div class="stat"><h3 id="totalRooms">7</h3><p>Total Rooms</p></div>
+      <div class="stat"><h3 id="totalRooms">14</h3><p>Total Rooms</p></div>
       <div class="stat"><h3 id="availRooms">0</h3><p>Available</p></div>
       <div class="stat"><h3 id="occRooms">0</h3><p>Occupied</p></div>
       <div class="stat"><h3 id="pendingCount">0</h3><p>Pending Approval</p></div>
@@ -177,8 +223,8 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
 const rentPrices = {"S1":9480,"S4":18740,"S5":4740,"A1":4500,"B1":9440,"B2":10320,"B3":4740,"B4":5360,"B5":18220,"B6":4500,"B7":4620,"B8":9240,"B9":18000,"C1":51280};
 let tenants = [];
 let rooms = [];
-async function apiRequest(method, body){
-  const response = await fetch('/api/data', {
+async function apiRequest(method, body, endpoint='/api/data'){
+  const response = await fetch(endpoint, {
     method,
     headers: {'Content-Type':'application/json'},
     body: body ? JSON.stringify(body) : undefined
@@ -197,6 +243,55 @@ async function apiRequest(method, body){
   if(!contentType.includes('application/json')) throw new Error('The API did not return JSON. Redeploy the latest Vercel configuration.');
   return payload;
 }
+async function loadPublicRooms(){
+  try{
+    const data=await apiRequest('GET',undefined,'/api/data?view=rooms');
+    rooms=data.rooms || [];
+    const select=document.getElementById('houseNo');
+    select.innerHTML='<option value="">Select Room</option>'+rooms.map(room=>`<option value="${room.id}" ${room.status==='occupied'?'disabled':''}>${room.id} - Ksh ${Number(room.rent||0).toLocaleString()}${room.status==='occupied'?' (Occupied)':''}</option>`).join('');
+  }catch(error){
+    document.getElementById('tenantStatus').innerText=`❌ ${error.message}`;
+    document.getElementById('tenantStatus').style.color='crimson';
+  }
+}
+async function authRequest(method, body){
+  const response = await fetch('/api/auth', {method, credentials:'include', headers:{'Content-Type':'application/json'}, body:body ? JSON.stringify(body) : undefined});
+  const raw = await response.text();
+  let payload;
+  try{ payload = JSON.parse(raw); }catch(error){ throw new Error('Authentication API is not responding. Redeploy the latest Vercel commit.'); }
+  if(!response.ok) throw new Error(payload.error || 'Authentication request failed.');
+  return payload;
+}
+function setAuthMessage(message, color='crimson'){
+  const node=document.getElementById('authStatus'); if(node){node.innerText=message;node.style.color=color;}
+}
+function showAuthMode(setupRequired){
+  document.getElementById('setupView').style.display=setupRequired?'block':'none';
+  document.getElementById('loginView').style.display=setupRequired?'none':'block';
+  setAuthMessage('');
+}
+async function openManagement(){
+  try{
+    const auth=await authRequest('GET');
+    if(auth.authenticated){
+      document.getElementById('adminIdentity').innerText='Administrator • '+auth.user.email;
+      showPage('managePage');
+      syncFromDatabase();
+    }else{
+      showAuthMode(auth.setupRequired);
+      showPage('loginPage');
+    }
+  }catch(error){ showAuthMode(false); setAuthMessage(error.message); showPage('loginPage'); }
+}
+async function logoutAdmin(){
+  try{ await authRequest('POST',{action:'logout'}); }catch(error){}
+  document.getElementById('settingsPanel').style.display='none';
+  showPage('tenantPage');
+}
+function toggleSettings(){
+  const panel=document.getElementById('settingsPanel');
+  panel.style.display=panel.style.display==='none'?'block':'none';
+}
 async function syncFromDatabase(){
   const statusNode = document.getElementById('syncStatus');
   if(statusNode) statusNode.innerText = 'Syncing…';
@@ -206,7 +301,7 @@ async function syncFromDatabase(){
     rooms = data.rooms || [];
     renderManagement();
     if(statusNode){
-      statusNode.innerText = `MongoDB connected • ${data.roomCount || data.rooms?.length || 0} rooms loaded • ${new Date().toLocaleTimeString()}`;
+      statusNode.innerText = `${data.roomCount || data.rooms?.length || 0} rooms loaded • ${new Date().toLocaleTimeString()}`;
       statusNode.style.color = '#198754';
     }
   }catch(error){
@@ -226,7 +321,7 @@ function showPage(pageId){
   document.querySelectorAll('.nav-links button').forEach(b=>b.classList.remove('active'));
   document.getElementById(pageId).classList.add('active');
   if(pageId==='tenantPage') document.getElementById('btnTenant').classList.add('active');
-  else { document.getElementById('btnManage').classList.add('active'); renderManagement(); }
+  if(pageId==='managePage'){ document.getElementById('btnManage').classList.add('active'); renderManagement(); }
 }
 
 function updateRent(){
@@ -243,6 +338,24 @@ function updateBalance(){
 }
 
 document.getElementById('dateEntered').valueAsDate = new Date();
+
+document.getElementById('setupForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  try{ await authRequest('POST',{action:'setup',email:setupEmail.value,phone:setupPhone.value,password:setupPassword.value}); setAuthMessage('Administrator created. Opening management…','#198754'); setTimeout(openManagement,400); }
+  catch(error){ setAuthMessage(error.message); }
+});
+document.getElementById('loginForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  try{ await authRequest('POST',{action:'login',email:loginEmail.value,password:loginPassword.value}); setAuthMessage('Signed in.','#198754'); setTimeout(openManagement,250); }
+  catch(error){ setAuthMessage(error.message); }
+});
+document.getElementById('passwordForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const status=document.getElementById('passwordStatus');
+  if(newPassword.value!==confirmPassword.value){ status.innerText='New passwords do not match.'; status.style.color='crimson'; return; }
+  try{ await authRequest('POST',{action:'change-password',currentPassword:currentPassword.value,newPassword:newPassword.value}); status.innerText='Password changed successfully.'; status.style.color='#198754'; e.target.reset(); }
+  catch(error){ status.innerText=error.message; status.style.color='crimson'; }
+});
 
 // Tenant Submit
 document.getElementById('tenantForm').addEventListener('submit', async (e)=>{
@@ -381,7 +494,7 @@ function generateReport(){
 }
 
 renderManagement();
-syncFromDatabase();
+loadPublicRooms();
 </script>
 </body>
   </html>
