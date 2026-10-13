@@ -183,8 +183,19 @@ async function apiRequest(method, body){
     headers: {'Content-Type':'application/json'},
     body: body ? JSON.stringify(body) : undefined
   });
-  if(!response.ok) throw new Error((await response.json()).error || 'API request failed');
-  return response.json();
+  const contentType = response.headers.get('content-type') || '';
+  const raw = await response.text();
+  let payload;
+  try{ payload = JSON.parse(raw); }
+  catch(error){
+    if(raw.trim().startsWith('<!DOCTYPE') || raw.trim().startsWith('<')){
+      throw new Error('Vercel is serving the website HTML instead of /api/data. Redeploy the latest commit.');
+    }
+    throw new Error('The API returned an invalid response.');
+  }
+  if(!response.ok) throw new Error(payload.error || `API request failed (${response.status})`);
+  if(!contentType.includes('application/json')) throw new Error('The API did not return JSON. Redeploy the latest Vercel configuration.');
+  return payload;
 }
 async function syncFromDatabase(){
   const statusNode = document.getElementById('syncStatus');

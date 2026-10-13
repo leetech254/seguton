@@ -20,7 +20,7 @@ A browser-based rental and tenant management system.
 3. Add these Vercel environment variables for the relevant environments:
    - `MONGODB_URI`: MongoDB Atlas connection string
    - `MONGODB_DB`: database name, for example `seguton`
-4. Deploy. The static app is served from `index.html`; `/api/data` is the MongoDB-backed serverless endpoint. On the first successful request, it creates/updates the `rooms` collection with all 14 rooms.
+4. Deploy. The static app is served from `index.html`; `/api/data` is the MongoDB-backed serverless endpoint. The Vercel configuration intentionally excludes `/api/*` from the SPA rewrite. On the first successful request, it creates/updates the `rooms` collection with all 14 rooms.
 
 The app requires the API and MongoDB environment variables. If the database is unavailable, the UI shows an error and does not save data locally.
 
