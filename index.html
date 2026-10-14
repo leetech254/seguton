@@ -111,6 +111,9 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
 
 body.admin-mode .nav{display:none}body.admin-mode #managePage{padding-top:24px}.admin-menu-toggle,.admin-close{display:none}.admin-menu-items{display:flex;flex-direction:column;gap:8px}.admin-menu-group{border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:8px}.admin-menu-group:not(.open) .admin-submenu{display:none}.admin-menu-parent{width:100%;border:0;background:transparent;color:#92a1b2;text-transform:uppercase;letter-spacing:1px;font-size:10px;text-align:left;padding:9px 10px;display:flex;justify-content:space-between;cursor:pointer}.admin-menu-parent span{font-size:14px}.admin-submenu{display:flex;flex-direction:column;gap:4px}.admin-action-link{border:0;background:transparent;color:#dce3ec;padding:11px;border-radius:10px;text-align:left;font-weight:700;font-size:13px;cursor:pointer;display:flex;gap:10px;align-items:center}.admin-action-link:hover{background:#25364a;color:#f1c40f}.admin-console-label{color:#c8d2df;font-size:12px;letter-spacing:.3px}.admin-sidebar{min-height:calc(100vh - 55px)}
 @media(max-width:850px){body.admin-mode #managePage{padding-top:18px}.admin-menu-toggle{display:flex;align-items:center;gap:8px;position:fixed;top:14px;left:14px;z-index:220;background:#17283c;color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:11px 14px;font-weight:700;box-shadow:0 8px 22px rgba(0,0,0,.22)}.admin-sidebar{position:fixed;z-index:210;top:10px;bottom:10px;left:10px;width:275px;height:auto;min-height:0;transform:translateX(-120%);transition:transform .2s ease;overflow:auto;margin:0;display:flex;flex-direction:column;align-items:stretch;padding:18px 14px;border-radius:18px}.admin-sidebar.open{transform:translateX(0)}.admin-brand{border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:8px;padding:3px 8px 18px;min-width:0}.admin-close{display:block;margin-left:auto;border:0;background:transparent;color:#fff;font-size:27px;line-height:1;cursor:pointer}.admin-menu-items{display:flex}.admin-nav-label,.admin-sidebar-spacer{display:none}.admin-tab,.admin-action-link{white-space:normal;padding:11px}.admin-live{display:flex!important;margin-top:auto}.admin-logout{margin-left:0}.admin-layout .manage-container{margin-top:54px}.admin-console-label{display:none}}
+
+.admin-backdrop{display:none}
+@media(max-width:850px){.admin-backdrop{position:fixed;inset:0;z-index:205;background:rgba(5,12,20,.68);backdrop-filter:blur(3px)}body.admin-drawer-open{overflow:hidden}body.admin-drawer-open .admin-menu-toggle{display:none}body.admin-drawer-open .admin-backdrop{display:block}.admin-sidebar{top:0;bottom:0;left:0;width:min(310px,88vw);border-radius:0 20px 20px 0;padding:24px 16px 20px}}
 </style>
 </head>
 <body>
@@ -240,6 +243,7 @@ body.admin-mode .nav{display:none}body.admin-mode #managePage{padding-top:24px}.
 <div id="managePage" class="page">
   <div class="admin-layout">
     <button id="adminMenuToggle" class="admin-menu-toggle" onclick="toggleAdminMenu()">☰ <span>Admin menu</span></button>
+    <div id="adminBackdrop" class="admin-backdrop" onclick="toggleAdminMenu()" aria-hidden="true"></div>
     <aside class="admin-sidebar" aria-label="Management navigation">
       <div class="admin-brand"><span>🏠</span><div><strong>SEGUTON</strong><small>Estate admin console</small></div><button class="admin-close" onclick="toggleAdminMenu()">×</button></div>
       <div id="adminMenuItems" class="admin-menu-items">
@@ -450,7 +454,7 @@ function showAuthMode(setupRequired){
   document.getElementById('loginView').style.display=setupRequired?'none':'block';
   setAuthMessage('');
 }
-function toggleAdminMenu(){ document.querySelector('.admin-sidebar')?.classList.toggle('open'); }
+function toggleAdminMenu(){ const drawer=document.querySelector('.admin-sidebar'); if(!drawer) return; const isOpen=drawer.classList.toggle('open'); document.body.classList.toggle('admin-drawer-open',isOpen); document.getElementById('adminBackdrop')?.setAttribute('aria-hidden',String(!isOpen)); }
 function toggleAdminGroup(id){ const node=document.getElementById(id); if(node) node.parentElement.classList.toggle('open'); }
 
 function setAdminTab(tab){
@@ -462,7 +466,7 @@ function setAdminTab(tab){
     panel.style.display=visible?'': 'none';
   });
   document.querySelectorAll('.admin-tab').forEach(button=>button.classList.toggle('active',button.dataset.tab===tab));
-  document.querySelector('.admin-sidebar')?.classList.remove('open');
+  document.querySelector('.admin-sidebar')?.classList.remove('open'); document.body.classList.remove('admin-drawer-open'); document.getElementById('adminBackdrop')?.setAttribute('aria-hidden','true');
   if(tab==='settings') document.getElementById('settingsPanel').style.display='block';
 }
 
@@ -553,6 +557,7 @@ async function syncFromDatabase(){
 
 function showPage(pageId){
   document.body.classList.toggle('admin-mode',pageId==='managePage');
+  if(pageId!=='managePage'){ document.querySelector('.admin-sidebar')?.classList.remove('open'); document.body.classList.remove('admin-drawer-open'); }
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-links button').forEach(b=>{b.classList.remove('active');b.removeAttribute('aria-current');});
   document.getElementById(pageId).classList.add('active');
