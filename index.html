@@ -308,7 +308,7 @@ body.admin-mode .nav{display:none}body.admin-mode #managePage{padding-top:24px}.
         <label>Description (optional)</label><input type="text" id="feeDescription" maxlength="200" placeholder="Example: October water bill">
         <div style="display:flex;gap:8px"><button type="submit" class="submit">Add fee</button><button type="button" onclick="closeFeePanel()">Cancel</button></div>
       </form>
-      <small class="field-help">The fee is added to the tenant’s expected total and balance, and appears in the Tenant Portal.</small>
+      <small class="field-help">You will review the tenant, fee, amount, description, and new balance before saving. The fee then appears in the Tenant Portal and configured notifications.</small>
     </div>
     <div class="stats" data-admin-tab="overview">
       <div class="stat"><h3 id="totalRooms">14</h3><p>Total Rooms</p></div>
@@ -813,8 +813,15 @@ document.getElementById('feeForm').addEventListener('submit', async (e)=>{
   const category=document.getElementById('feeCategory').value;
   const amount=Number(document.getElementById('feeAmount').value);
   if(!category || !Number.isInteger(amount) || amount<=0){ showToast('Select a fee type and enter a valid amount.'); return; }
+  const tenant=tenants.find(t=>t.id===feeTenantId);
+  const description=document.getElementById('feeDescription').value.trim() || 'No description provided';
+  if(!tenant) { showToast('Tenant record is no longer available. Refresh the dashboard.'); return; }
+  const currentBalance=Math.max(0,Number(tenant.balance||0));
+  const nextBalance=currentBalance+amount;
+  const confirmed=confirm(`Review fee before saving\n\nTenant: ${tenant.name}\nRoom: ${tenant.houseNo}\nFee type: ${category}\nAmount: Ksh ${amount.toLocaleString()}\nDescription: ${description}\n\nCurrent balance: Ksh ${currentBalance.toLocaleString()}\nNew balance: Ksh ${nextBalance.toLocaleString()}\n\nThis charge will be added to the tenant account, shown in their portal, and sent by configured email/SMS notifications. Continue?`);
+  if(!confirmed) { showToast('Fee was not added.'); return; }
   try{
-    const result=await apiRequest('PATCH',{id:feeTenantId,action:'add-fee',feeCategory:category,feeAmount:amount,feeDescription:document.getElementById('feeDescription').value});
+    const result=await apiRequest('PATCH',{id:feeTenantId,action:'add-fee',feeCategory:category,feeAmount:amount,feeDescription:description});
     closeFeePanel(); showToast(result.message||'Fee added and tenant balance updated.','success'); await syncFromDatabase();
   }catch(error){ showToast(error.message); }
 });
