@@ -7,6 +7,7 @@ A browser-based rental and tenant management system.
 - Tenant registration with room availability and rent-balance calculations; new applications continue directly to the tenant payment portal
 - Database-only persistence through Vercel serverless functions; no browser localStorage is used
 - Management dashboard with occupancy, pending approvals, collections, and outstanding balances
+- Selectable Overview room cards with room details, tenant balance, payment, fee, approval, registration, and release controls
 - Search and status filters for tenant applications
 - Accept/decline workflow with duplicate ID and occupied-room protection
 - Payment updates for accepted tenants

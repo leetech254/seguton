@@ -108,6 +108,7 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
 .payment-prompt-controls{display:flex;align-items:end;gap:8px;flex-wrap:wrap}.payment-prompt-controls label{margin:0;font-size:11px}.payment-prompt-controls input{width:145px}.payment-prompt-controls button{width:auto;margin:0;padding:11px 14px;white-space:nowrap}@media(max-width:520px){.payment-prompt-controls{display:grid;grid-template-columns:1fr 1fr}.payment-prompt-controls label{grid-column:span 1}.payment-prompt-controls input{width:100%}.payment-prompt-controls button{grid-column:1/-1;width:100%}}
 .portal-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:18px}.portal-steps div{display:flex;align-items:center;gap:7px;padding:9px 8px;background:#f5f7fa;border-radius:10px;color:#667085;font-size:12px}.portal-steps b{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#2c3e50;color:#f1c40f;font-size:12px}
 @media(max-width:520px){.portal-steps{gap:5px}.portal-steps div{display:block;text-align:center;padding:8px 4px}.portal-steps b{margin:0 auto 4px}.portal-steps span{display:block;font-size:10px}}
+.room-grid .room{cursor:pointer;transition:transform .15s ease,box-shadow .15s ease}.room-grid .room:hover,.room-grid .room:focus{transform:translateY(-3px);box-shadow:0 10px 22px rgba(22,32,43,.16);outline:3px solid rgba(241,196,15,.45)}.room-detail-panel{margin-top:18px;padding:20px;border:1px solid #dbe2ea;border-radius:16px;background:#f8fafc}.room-detail-heading{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid #e2e8f0;padding-bottom:12px;margin-bottom:14px}.room-detail-heading h3{margin:4px 0 0;color:#243447;font-size:24px}.room-detail-heading button{border:0;border-radius:50%;background:#e9eef4;color:#243447;width:32px;height:32px;font-size:22px;cursor:pointer}.room-detail-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.room-detail-stat{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:12px}.room-detail-stat small{display:block;color:#667085;font-size:11px}.room-detail-stat strong{display:block;color:#243447;font-size:16px;margin-top:4px}.room-detail-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}.room-detail-actions button{width:auto;margin:0;padding:10px 14px}.room-detail-empty{padding:12px;background:#fff;border-radius:12px;color:#667085}@media(max-width:600px){.room-detail-grid{grid-template-columns:repeat(2,1fr)}.room-detail-panel{padding:14px}.room-detail-actions button{width:100%}}
 
 body.admin-mode .nav{display:none}body.admin-mode #managePage{padding-top:24px}.admin-menu-toggle,.admin-close{display:none}.admin-menu-items{display:flex;flex-direction:column;gap:8px}.admin-menu-group{border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:8px}.admin-menu-group:not(.open) .admin-submenu{display:none}.admin-menu-parent{width:100%;border:0;background:transparent;color:#92a1b2;text-transform:uppercase;letter-spacing:1px;font-size:10px;text-align:left;padding:9px 10px;display:flex;justify-content:space-between;cursor:pointer}.admin-menu-parent span{font-size:14px}.admin-submenu{display:flex;flex-direction:column;gap:4px}.admin-action-link{border:0;background:transparent;color:#dce3ec;padding:11px;border-radius:10px;text-align:left;font-weight:700;font-size:13px;cursor:pointer;display:flex;gap:10px;align-items:center}.admin-action-link:hover{background:#25364a;color:#f1c40f}.admin-console-label{color:#c8d2df;font-size:12px;letter-spacing:.3px}.admin-sidebar{min-height:calc(100vh - 55px)}
 @media(max-width:850px){body.admin-mode #managePage{padding-top:18px}.admin-menu-toggle{display:flex;align-items:center;gap:8px;position:fixed;top:14px;left:14px;z-index:220;background:#17283c;color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:11px 14px;font-weight:700;box-shadow:0 8px 22px rgba(0,0,0,.22)}.admin-sidebar{position:fixed;z-index:210;top:10px;bottom:10px;left:10px;width:275px;height:auto;min-height:0;transform:translateX(-120%);transition:transform .2s ease;overflow:auto;margin:0;display:flex;flex-direction:column;align-items:stretch;padding:18px 14px;border-radius:18px}.admin-sidebar.open{transform:translateX(0)}.admin-brand{border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:8px;padding:3px 8px 18px;min-width:0}.admin-close{display:block;margin-left:auto;border:0;background:transparent;color:#fff;font-size:27px;line-height:1;cursor:pointer}.admin-menu-items{display:flex}.admin-nav-label,.admin-sidebar-spacer{display:none}.admin-tab,.admin-action-link{white-space:normal;padding:11px}.admin-live{display:flex!important;margin-top:auto}.admin-logout{margin-left:0}.admin-layout .manage-container{margin-top:54px}.admin-console-label{display:none}}
@@ -322,6 +323,10 @@ body.admin-mode .nav{display:none}body.admin-mode #managePage{padding-top:24px}.
     <div class="panel" data-admin-tab="overview rooms">
       <h2>🏘️ Rooms Status - Rooms <button class="btn-report" onclick="generateReport()">📊 Generate Report Excel</button></h2>
       <div class="room-grid" id="roomGrid"></div>
+      <div id="roomDetailPanel" class="room-detail-panel" style="display:none" aria-live="polite">
+        <div class="room-detail-heading"><div><span class="eyebrow">ROOM DETAILS</span><h3 id="roomDetailTitle">Room</h3></div><button type="button" onclick="closeRoomDetails()" aria-label="Close room details">×</button></div>
+        <div id="roomDetailBody"></div>
+      </div>
     </div>
 
     <div class="panel" data-admin-tab="tenants billing">
@@ -717,7 +722,7 @@ document.getElementById('paymentForm').addEventListener('submit', async (e)=>{
 });
 function renderManagement(){
   const grid = document.getElementById('roomGrid');
-  grid.innerHTML = rooms.length ? rooms.map(r=>`<div class="room ${r.status}">${escapeHtml(r.id)}<br><small>${escapeHtml(r.type)}</small><br>${r.status==='available'?'✅ Available':'👤 '+escapeHtml(r.tenant)}<br><small>Ksh ${Number(r.rent || rentPrices[r.id] || 0).toLocaleString()}</small></div>`).join('') : '<div class="empty-state">No rooms were returned by the database. Refresh after checking the database connection.</div>';
+  grid.innerHTML = rooms.length ? rooms.map(r=>`<div class="room ${r.status}" role="button" tabindex="0" onclick="openRoomDetails('${escapeHtml(r.id)}')" onkeydown="if(event.key==='Enter'||event.key===' ')openRoomDetails('${escapeHtml(r.id)}')" aria-label="Open details for room ${escapeHtml(r.id)}">${escapeHtml(r.id)}<br><small>${escapeHtml(r.type)}</small><br>${r.status==='available'?'✅ Available':'👤 '+escapeHtml(r.tenant)}<br><small>Ksh ${Number(r.rent || rentPrices[r.id] || 0).toLocaleString()}</small></div>`).join('') : '<div class="empty-state">No rooms were returned by the database. Refresh after checking the database connection.</div>';
   const avail = rooms.filter(r=>r.status==='available').length;
   const occ = rooms.filter(r=>r.status==='occupied').length;
   document.getElementById('totalRooms').innerText = rooms.length;
@@ -740,6 +745,26 @@ function renderManagement(){
     <td><span class="badge ${t.status}">${t.status}</span></td>
     <td>${t.status==='pending'?`<button class="btn-small btn-accept" onclick="approveTenant(${t.id})">Accept</button><button class="btn-small btn-decline" onclick="declineTenant(${t.id})">Decline</button>`:t.status==='accepted'?`<button class="btn-small btn-payment" onclick="recordPayment(${t.id})">Record payment</button><button class="btn-small" onclick="openFeePanel(${t.id})">Add fee</button>`:'-'}${Number(t.paid||0)>0 || (t.paymentHistory||[]).length?`<button class="btn-small btn-decline" onclick="deletePaymentHistory(${t.id})">Delete payment history</button>`:''}<button class="btn-small btn-decline" onclick="deleteTenant(${t.id})">Delete tenant</button></td>
   </tr>`).join('') : '<tr><td colspan="11" class="empty-state">No database records match your filters.</td></tr>';
+}
+function closeRoomDetails(){ document.getElementById('roomDetailPanel').style.display='none'; document.getElementById('roomDetailBody').innerHTML=''; }
+function openRoomDetails(roomId){
+  const room=rooms.find(item=>item.id===roomId);
+  if(!room){ showToast('Room details are not available. Refresh the dashboard.'); return; }
+  const accepted=tenants.find(t=>t.houseNo===room.id && t.status==='accepted');
+  const pending=tenants.filter(t=>t.houseNo===room.id && t.status==='pending');
+  const tenant=accepted || pending[0];
+  const balance=tenant ? Math.max(0,Number(tenant.balance||0)) : 0;
+  document.getElementById('roomDetailTitle').innerText=`${room.id} · ${room.type}`;
+  document.getElementById('roomDetailBody').innerHTML=`
+    <div class="room-detail-grid">
+      <div class="room-detail-stat"><small>Status</small><strong>${room.status==='occupied'?'Occupied':'Available'}</strong></div>
+      <div class="room-detail-stat"><small>Monthly rent</small><strong>Ksh ${Number(room.rent||rentPrices[room.id]||0).toLocaleString()}</strong></div>
+      <div class="room-detail-stat"><small>Tenant</small><strong>${tenant?escapeHtml(tenant.name):'No tenant'}</strong></div>
+      <div class="room-detail-stat"><small>Balance owed</small><strong>Ksh ${balance.toLocaleString()}</strong></div>
+    </div>
+    ${tenant?`<div class="room-detail-empty" style="margin-top:12px"><strong>${accepted?'Accepted tenant':'Pending application'}</strong><br>${escapeHtml(tenant.phone||'No phone')} · ID ${escapeHtml(tenant.idNumber||'-')}<br>Expected Ksh ${Number(tenant.expected||0).toLocaleString()} · Paid Ksh ${Number(tenant.paid||0).toLocaleString()}${pending.length>1?`<br>${pending.length-1} more pending application(s) for this room`:''}</div>`:'<div class="room-detail-empty">This room is available for new tenant applications.</div>'}
+    <div class="room-detail-actions">${accepted?`<button class="btn-small btn-payment" onclick="recordPayment(${accepted.id})">Record payment</button><button class="btn-small" onclick="openFeePanel(${accepted.id})">Add fee or penalty</button><button class="btn-small btn-decline" onclick="deleteTenant(${accepted.id})">Delete tenant & release room</button>`:pending.length?`<button class="btn-small btn-accept" onclick="approveTenant(${pending[0].id})">Approve application</button><button class="btn-small btn-decline" onclick="declineTenant(${pending[0].id})">Decline application</button>`:'<button class="btn-small" onclick="showPage(\'tenantPage\');document.getElementById(\'houseNo\').value=\''+escapeHtml(room.id)+'\';updateRent()">Open tenant registration</button>'}</div>`;
+  const panel=document.getElementById('roomDetailPanel'); panel.style.display='block'; panel.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
 async function generateMonthlyRent(){
