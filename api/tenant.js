@@ -1,4 +1,5 @@
 const { getDatabase, initializeDatabase, cleanTenant } = require('../lib/database');
+const { notifyTenantAccountUpdate, notifyAdmins } = require('../lib/notifications');
 
 function normalizePhone(value) {
   const compact = String(value || '').replace(/[\s-]/g, '');
@@ -67,6 +68,10 @@ module.exports = async (req, res) => {
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Enter a valid email address.' });
       if (!newPhone) return res.status(400).json({ error: 'Enter a valid Kenyan phone number using +254 7xx/1xx or 07xx/01xx.' });
       const result = await tenantCollection.updateMany({ id: { $in: matches.map(record => record.id) } }, { $set: { email, phone: newPhone, updatedAt: new Date() } });
+      await Promise.allSettled([
+        notifyTenantAccountUpdate({ ...matches[0], email, phone: newPhone }, { title: 'Your contact details were updated', details: `Your notification email is now ${email || 'not set'} and your payment prompt number is ${newPhone}.` }),
+        notifyAdmins(db, { title: 'Tenant contact details updated', details: `${matches[0].name} (${matches[0].houseNo}) changed their notification email to ${email || 'not set'} and payment phone to ${newPhone}.` })
+      ]);
       return res.status(200).json({ ok: true, updated: result.modifiedCount, email, phone: newPhone, message: 'Contact details updated. Future account and payment updates will use this email and phone number.' });
     }
 
