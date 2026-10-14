@@ -4,7 +4,7 @@ A browser-based rental and tenant management system.
 
 ## Included features
 
-- Tenant registration with room availability and rent-balance calculations
+- Tenant registration with room availability and rent-balance calculations; new applications continue directly to the tenant payment portal
 - Database-only persistence through Vercel serverless functions; no browser localStorage is used
 - Management dashboard with occupancy, pending approvals, collections, and outstanding balances
 - Search and status filters for tenant applications
@@ -18,10 +18,10 @@ A browser-based rental and tenant management system.
 - Password-confirmed administrator account deletion with explicit `DELETE` confirmation; tenant and room records are preserved
 - Non-blocking toast notifications for API errors, validation failures, authentication, payments, and successful actions
 - Faster first paint with deferred reporting-library loading, request loading states, disabled duplicate-submit protection, and accessible active navigation
-- Tenant registration collects normalized Kenyan phone numbers, validates the 8-digit Kenyan National ID format, auto-fills the full room payment, and only shows available rooms
+- Tenant registration collects normalized Kenyan phone numbers, validates the 8-digit Kenyan National ID format, auto-fills the rent due, and only shows available rooms
 - Tenant Portal login using name, National ID, and phone number shows applications, payment history, total paid, and live balance
 - Management payment entry accepts the amount received, adds it to the tenant total, and makes the new payment visible in the Tenant Portal
-- Tenant Portal STK Push payments through CourtneyTech with server-side credentials and confirmed-payment callbacks
+- Tenant Portal STK Push payments through CourtneyTech with server-side credentials and confirmed-payment callbacks; successful registration opens this payment flow instead of the admin dashboard
 - Admin dashboard live polling with toast and banner notifications for confirmed M-Pesa payments, including amount, room, and receipt
 
 ## Deploy to Vercel with a Database
