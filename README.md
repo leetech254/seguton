@@ -23,7 +23,7 @@ A browser-based rental and tenant management system.
 - Management payment entry accepts the amount received, adds it to the tenant total, and makes the new payment visible in the Tenant Portal
 - Admin payment-history deletion requires confirmation and resets the tenant paid total to Ksh 0 with the full balance restored
 - Admin monthly rent generation adds one base-rent charge per accepted tenant, updates balances, and prevents duplicate charges for the same month
-- Admin fee management for Water, Electricity, Service charge, Garbage collection, and custom fees with descriptions, tenant-visible charge history, balance updates, and Excel reporting
+- Admin fee management for Water, Electricity, Service charge, Garbage collection, Penalty, and custom fees with descriptions, tenant-visible charge history, balance updates, and Excel reporting
 - Tenant Portal STK Push payments through CourtneyTech with server-side credentials and confirmed-payment callbacks; successful registration opens this payment flow instead of the admin dashboard
 - Admin dashboard live polling with toast and banner notifications for confirmed M-Pesa payments, including amount, room, and receipt
 - Automated tenant notifications when monthly rent or a utility fee is generated, using optional email and/or SMS delivery

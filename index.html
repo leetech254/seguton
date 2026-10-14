@@ -290,7 +290,7 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
       <h2>Add tenant fee</h2>
       <p id="feeTenantName" class="sub"></p>
       <form id="feeForm">
-        <div class="row"><div><label>Fee type</label><select id="feeCategory" required><option value="">Select fee type</option><option>Water</option><option>Electricity</option><option>Service charge</option><option>Garbage collection</option><option>Other</option></select></div><div><label>Amount (Ksh)</label><input type="number" id="feeAmount" min="1" step="1" required placeholder="Amount due"></div></div>
+        <div class="row"><div><label>Fee type</label><select id="feeCategory" required><option value="">Select fee type</option><option>Water</option><option>Electricity</option><option>Service charge</option><option>Garbage collection</option><option>Penalty</option><option>Other</option></select></div><div><label>Amount (Ksh)</label><input type="number" id="feeAmount" min="1" step="1" required placeholder="Amount due"></div></div>
         <label>Description (optional)</label><input type="text" id="feeDescription" maxlength="200" placeholder="Example: October water bill">
         <div style="display:flex;gap:8px"><button type="submit" class="submit">Add fee</button><button type="button" onclick="closeFeePanel()">Cancel</button></div>
       </form>
