@@ -1,6 +1,6 @@
 const { ROOM_DEFINITIONS, getDatabase, initializeDatabase, readSnapshot, cleanTenant } = require('../lib/database');
 const { requireAdmin } = require('../lib/auth');
-const { notifyTenant } = require('../lib/notifications');
+const { notifyTenant, notifyAdmins } = require('../lib/notifications');
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
@@ -41,7 +41,8 @@ module.exports = async (req, res) => {
       if (await tenants.findOne({ idNumber: idNumber, status: { $in: ['pending', 'accepted'] } })) return res.status(409).json({ error: 'An active application already exists for this ID number.' });
       const tenant = { id: Date.now(), name: String(body.name).trim(), idNumber, email, phone: phone.startsWith('0') ? '+254' + phone.slice(1) : phone, houseNo: body.houseNo, dateEntered: body.dateEntered, monthlyRent: expected, expected, paid, feesTotal: 0, balance: Math.max(0, expected - paid), status: 'pending', paymentHistory: paid > 0 ? [{ amount: paid, totalPaid: paid, date: new Date().toISOString(), source: 'Tenant registration' }] : [], feeHistory: [], timestamp: new Date().toLocaleString(), createdAt: new Date() };
       await tenants.insertOne(tenant);
-      return res.status(201).json({ tenant: cleanTenant(tenant) });
+      await notifyAdmins(db, { title: 'New tenant application', details: `${tenant.name} applied for room ${tenant.houseNo}. Tenant email: ${email || 'not provided'}.` });
+      return res.status(201).json({ tenant: cleanTenant(tenant), emailNotificationsEnabled: Boolean(email) });
     }
 
     if (req.method === 'PATCH') {
@@ -51,7 +52,7 @@ module.exports = async (req, res) => {
         const rentMonth = String(month || new Date().toISOString().slice(0, 7));
         if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(rentMonth)) return res.status(400).json({ error: 'Month must use YYYY-MM format.' });
         const accepted = await tenants.find({ status: 'accepted' }).toArray();
-        let generated = 0; let skipped = 0; let total = 0; const notificationJobs = [];
+        let generated = 0; let skipped = 0; let total = 0; const notificationJobs = []; const adminUpdates = [];
         for (const record of accepted) {
           const monthlyRent = Number(record.monthlyRent || record.expected || 0);
           if (!Number.isFinite(monthlyRent) || monthlyRent <= 0) { skipped += 1; continue; }
@@ -65,11 +66,13 @@ module.exports = async (req, res) => {
           );
           if (result.modifiedCount) {
             generated += 1; total += monthlyRent;
+            adminUpdates.push(`${record.name} (${record.houseNo}): Ksh ${monthlyRent.toLocaleString()}`);
             notificationJobs.push(notifyTenant({ ...record, expected: Number(record.expected || 0) + monthlyRent, balance: Math.max(0, Number(record.expected || 0) + monthlyRent - Number(record.paid || 0)) }, { title: `Monthly rent generated for ${rentMonth}`, amount: monthlyRent, balance: Math.max(0, Number(record.expected || 0) + monthlyRent - Number(record.paid || 0)), detail: 'Monthly rent' }));
           } else skipped += 1;
         }
         const notificationResults = await Promise.allSettled(notificationJobs);
         notificationResults.filter(result => result.status === 'rejected').forEach(result => console.error('SEGUTON notification error:', result.reason?.message || result.reason));
+        await notifyAdmins(db, { title: `Monthly rent generated for ${rentMonth}`, details: adminUpdates.length ? adminUpdates.join('\n') : 'No new monthly rent charges were generated.' });
         return res.status(200).json({ ok: true, month: rentMonth, generated, skipped, total, notificationsAttempted: notificationJobs.length, message: generated ? `Generated Ksh ${total.toLocaleString()} for ${generated} tenant${generated === 1 ? '' : 's'}.` : `Monthly rent for ${rentMonth} was already generated.` });
       }
       if (action === 'add-fee') {
@@ -86,6 +89,7 @@ module.exports = async (req, res) => {
       if (action === 'delete-tenant') {
         if (confirmation !== 'DELETE TENANT') return res.status(400).json({ error: 'Type DELETE TENANT to confirm permanent tenant deletion.' });
         await tenants.deleteOne({ id: Number(id) });
+        await notifyAdmins(db, { title: 'Tenant deleted', details: `${tenant.name} and all associated details were deleted. Room ${tenant.houseNo} was released.` });
         return res.status(200).json({ ok: true, releasedRoom: tenant.houseNo, message: `${tenant.name} was permanently removed and room ${tenant.houseNo} is available again.` });
       }
       if (action === 'delete-payment-history') {
@@ -107,6 +111,7 @@ module.exports = async (req, res) => {
         try {
           await notifyTenant({ ...tenant, expected: nextExpected, balance: Math.max(0, nextExpected - Number(tenant.paid || 0)) }, { title: `${category} fee added`, amount, balance: Math.max(0, nextExpected - Number(tenant.paid || 0)), detail: description || category });
         } catch (error) { console.error('SEGUTON notification error:', error.message); }
+        await notifyAdmins(db, { title: 'Tenant fee added', details: `${category} of Ksh ${amount.toLocaleString()} added to ${tenant.name} (${tenant.houseNo}). New balance: Ksh ${Math.max(0, nextExpected - Number(tenant.paid || 0)).toLocaleString()}.` });
         return res.status(200).json({ ok: true, message: `${category} fee of Ksh ${amount.toLocaleString()} added.` });
       }
       if (status === 'accepted' && await tenants.findOne({ houseNo: tenant.houseNo, status: 'accepted', id: { $ne: Number(id) } })) return res.status(409).json({ error: `Room ${tenant.houseNo} is already occupied.` });
@@ -120,6 +125,19 @@ module.exports = async (req, res) => {
         operation.$push = { paymentHistory: { amount, totalPaid: nextPaid, date: new Date().toISOString(), source: 'Management' } };
       }
       await tenants.updateOne({ id: Number(id) }, operation);
+      const updatedTenant = await tenants.findOne({ id: Number(id) });
+      if (paymentAmount !== undefined || (paid !== undefined && Number(paid) > Number(tenant.paid || 0))) {
+        const amount = paymentAmount !== undefined ? Number(paymentAmount) : Number(paid) - Number(tenant.paid || 0);
+        await Promise.allSettled([
+          notifyTenant(updatedTenant, { title: 'Payment recorded', amount, balance: Number(updatedTenant?.balance || 0), detail: 'Management payment' }),
+          notifyAdmins(db, { title: 'Tenant payment recorded', details: `${tenant.name} paid Ksh ${amount.toLocaleString()} for ${tenant.houseNo}. New balance: Ksh ${Number(updatedTenant?.balance || 0).toLocaleString()}.` })
+        ]);
+      } else if (status !== undefined) {
+        await Promise.allSettled([
+          notifyTenant(updatedTenant, { title: `Application ${status}`, amount: 0, balance: Number(updatedTenant?.balance || 0), detail: `Room ${tenant.houseNo}` }),
+          notifyAdmins(db, { title: `Tenant application ${status}`, details: `${tenant.name}'s application for ${tenant.houseNo} was marked ${status}.` })
+        ]);
+      }
       return res.status(200).json({ ok: true });
     }
 

@@ -29,6 +29,7 @@ A browser-based rental and tenant management system.
 - Tenant Portal STK Push payments through CourtneyTech with server-side credentials and confirmed-payment callbacks; successful registration opens this payment flow instead of the admin dashboard
 - Admin dashboard live polling with toast and banner notifications for confirmed M-Pesa payments, including amount, room, and receipt
 - Automated tenant notifications when monthly rent or a utility fee is generated, using optional email and/or SMS delivery
+- Optional tenant email field for payment receipts, fees, application status changes, and other account updates; administrators receive Resend alerts for new applications, payments, fees, rent generation, status changes, and deletions
 
 ## Deploy to Vercel with a Database
 
@@ -44,7 +45,7 @@ A browser-based rental and tenant management system.
    - `COURTNEY_BASE_URL`: `https://courtneytech.xyz/api`
    - `COURTNEY_CALLBACK_BASE_URL`: your public Vercel URL, for example `https://seguton.vercel.app`
    - `COURTNEY_CALLBACK_SECRET`: a random callback secret used to protect payment confirmations
-   - `RESEND_API_KEY`: optional Resend API key for tenant email notifications
+   - `RESEND_API_KEY`: optional Resend API key for tenant notifications and administrator alerts
    - `NOTIFICATION_FROM_EMAIL`: verified Resend sender, for example `SEGUTON <notifications@example.com>`
    - `AT_USERNAME`: optional Africa's Talking username for tenant SMS notifications
    - `AT_API_KEY`: Africa's Talking API key
@@ -53,7 +54,7 @@ A browser-based rental and tenant management system.
    The primary variable name must be exactly `MONGODB_URI`. The API also accepts `MONGODB_URL` and `MONGO_URI` for compatibility, but `MONGODB_URI` is recommended. Environment variables must be enabled for Production, and the project must be redeployed after changes.
 4. Deploy. The static app is served from `index.html`; `/api/data`, `/api/tenant`, `/api/stkpush`, and `/api/stk-callback` are serverless endpoints. Do not add a catch-all rewrite in the Vercel dashboard; Vercel natively routes the root `api/` directory to Functions. On the first successful request, it creates/updates the `rooms` collection with all 14 rooms.
 
-The app requires the API and database environment variables. If the database is unavailable, the UI shows an error and does not save data locally. Notification delivery is optional and never prevents a rent or fee update from being saved; configure either Resend, Africa's Talking, or both.
+The app requires the API and database environment variables. If the database is unavailable, the UI shows an error and does not save data locally. Notification delivery is optional and never prevents a rent or fee update from being saved; configure either Resend, Africa's Talking, or both. Tenant emails are used directly when provided; no email verification step is required.
 
 ## API
 
@@ -66,6 +67,7 @@ The app requires the API and database environment variables. If the database is 
 - `PATCH /api/data` with `{ "action": "generate-monthly-rent", "month": "2026-10" }` — admin-only idempotent monthly rent generation for accepted tenants
 - `PATCH /api/data` with `{ "id": 123, "action": "add-fee", "feeCategory": "Water", "feeAmount": 500, "feeDescription": "October water bill" }` — admin-only fee assessment and balance update
 - Monthly rent generation and fee assessment automatically attempt to notify the tenant by SMS and/or email with the charge amount, room, and updated balance
+- Successful STK Push payments send a receipt/update to the tenant email when provided and an administrator alert through Resend; administrator alerts also cover new applications, manual payments, fees, rent generation, status changes, and tenant deletion
 - `/api/auth` — one-time administrator setup, login, logout, session status, and password changes
 - `POST /api/tenant` — verifies tenant name, 8-digit ID, and phone and returns applications/payment history
 - `POST /api/stkpush` — sends an STK prompt for an outstanding tenant balance; payment is not credited until the provider callback confirms success

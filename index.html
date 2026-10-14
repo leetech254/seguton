@@ -161,8 +161,9 @@ body.admin-mode .nav{display:none}body.admin-mode #managePage{padding-top:24px}.
       <label>Phone Number</label>
       <input type="tel" id="phone" required inputmode="tel" autocomplete="tel" placeholder="+254 712 345 678 or 0712 345 678" pattern="(?:\+254|0)[17][0-9\s-]{8,}" title="Use +254 7xx xxx xxx, +254 1xx xxx xxx, 07xx xxx xxx or 01xx xxx xxx">
 
-      <label>Email Address <span style="font-weight:400;color:#667085">(optional)</span></label>
+      <label>Email for payment and account updates <span style="font-weight:400;color:#667085">(optional)</span></label>
       <input type="email" id="email" autocomplete="email" placeholder="tenant@example.com">
+      <small class="field-help">Resend email updates are sent here when payments, fees, or application status change.</small>
 
       <div class="row">
         <div>
@@ -342,7 +343,7 @@ body.admin-mode .nav{display:none}body.admin-mode #managePage{padding-top:24px}.
       <div style="overflow:auto;">
         <table>
           <thead>
-            <tr><th>Name</th><th>ID</th><th>Phone</th><th>Room</th><th>Date</th><th>Expected</th><th>Fees</th><th>Paid</th><th>Balance</th><th>Status</th><th>Action</th></tr>
+            <tr><th>Name</th><th>ID</th><th>Phone</th><th>Email</th><th>Room</th><th>Date</th><th>Expected</th><th>Fees</th><th>Paid</th><th>Balance</th><th>Status</th><th>Action</th></tr>
           </thead>
           <tbody id="tenantTable"></tbody>
         </table>
@@ -740,11 +741,11 @@ function renderManagement(){
     return matchesSearch && (status==='all' || t.status===status);
   });
   tbody.innerHTML = visibleTenants.length ? visibleTenants.map(t=>`<tr>
-    <td>${escapeHtml(t.name)}</td><td>${escapeHtml(t.idNumber)}</td><td>${escapeHtml(t.phone || '-')}</td><td>${escapeHtml(t.houseNo)}</td><td>${escapeHtml(t.dateEntered)}</td>
+    <td>${escapeHtml(t.name)}</td><td>${escapeHtml(t.idNumber)}</td><td>${escapeHtml(t.phone || '-')}</td><td>${escapeHtml(t.email || '-')}</td><td>${escapeHtml(t.houseNo)}</td><td>${escapeHtml(t.dateEntered)}</td>
     <td>${Number(t.expected||0).toLocaleString()}</td><td>${Number(t.feesTotal||0).toLocaleString()}</td><td>${Number(t.paid||0).toLocaleString()}</td><td style="color:${t.balance>0?'red':'green'}">${Number(t.balance||0).toLocaleString()}</td>
     <td><span class="badge ${t.status}">${t.status}</span></td>
     <td>${t.status==='pending'?`<button class="btn-small btn-accept" onclick="approveTenant(${t.id})">Accept</button><button class="btn-small btn-decline" onclick="declineTenant(${t.id})">Decline</button>`:t.status==='accepted'?`<button class="btn-small btn-payment" onclick="recordPayment(${t.id})">Record payment</button><button class="btn-small" onclick="openFeePanel(${t.id})">Add fee</button>`:'-'}${Number(t.paid||0)>0 || (t.paymentHistory||[]).length?`<button class="btn-small btn-decline" onclick="deletePaymentHistory(${t.id})">Delete payment history</button>`:''}<button class="btn-small btn-decline" onclick="deleteTenant(${t.id})">Delete tenant</button></td>
-  </tr>`).join('') : '<tr><td colspan="11" class="empty-state">No database records match your filters.</td></tr>';
+  </tr>`).join('') : '<tr><td colspan="12" class="empty-state">No database records match your filters.</td></tr>';
 }
 function closeRoomDetails(){ document.getElementById('roomDetailPanel').style.display='none'; document.getElementById('roomDetailBody').innerHTML=''; }
 function openRoomDetails(roomId){

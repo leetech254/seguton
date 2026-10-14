@@ -1,4 +1,5 @@
 const { getDatabase, initializeDatabase } = require('../lib/database');
+const { notifyTenant, notifyAdmins } = require('../lib/notifications');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed.' });
@@ -33,7 +34,14 @@ module.exports = async (req, res) => {
         $set: { 'stkPayments.$.status': 'completed', 'stkPayments.$.receipt': data.mpesaReceipt || null, 'stkPayments.$.completedAt': new Date() }
       });
       const updated = await tenants.findOne({ id: tenant.id });
-      if (updated) await tenants.updateOne({ id: tenant.id }, { $set: { balance: Math.max(0, Number(updated.expected || 0) - Number(updated.paid || 0)) } });
+      if (updated) {
+        const balance = Math.max(0, Number(updated.expected || 0) - Number(updated.paid || 0));
+        await tenants.updateOne({ id: tenant.id }, { $set: { balance } });
+        await Promise.allSettled([
+          notifyTenant({ ...updated, balance }, { title: 'M-Pesa payment received', amount, balance, detail: 'STK Push payment', receipt: data.mpesaReceipt || null }),
+          notifyAdmins(db, { title: 'M-Pesa payment received', details: `${updated.name} paid Ksh ${amount.toLocaleString()} for ${updated.houseNo}. New balance: Ksh ${balance.toLocaleString()}${data.mpesaReceipt ? `. Receipt: ${data.mpesaReceipt}.` : '.'}` })
+        ]);
+      }
     } else {
       await tenants.updateOne(paymentFilter, { $set: { 'stkPayments.$.status': paymentStatus, 'stkPayments.$.resultDescription': data.resultDesc || null, 'stkPayments.$.updatedAt': new Date() } });
     }
