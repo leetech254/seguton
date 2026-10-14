@@ -36,23 +36,30 @@ module.exports = async (req, res) => {
       if (!Number.isFinite(expected) || !Number.isFinite(paid) || paid < 0) return res.status(400).json({ error: 'Expected rent and payment must be valid numbers.' });
       if (await tenants.findOne({ houseNo: body.houseNo, status: 'accepted' })) return res.status(409).json({ error: `Room ${body.houseNo} is already occupied.` });
       if (await tenants.findOne({ idNumber: idNumber, status: { $in: ['pending', 'accepted'] } })) return res.status(409).json({ error: 'An active application already exists for this ID number.' });
-      const tenant = { id: Date.now(), name: String(body.name).trim(), idNumber, phone: phone.startsWith('0') ? '+254' + phone.slice(1) : phone, houseNo: body.houseNo, dateEntered: body.dateEntered, expected, paid, balance: expected - paid, status: 'pending', timestamp: new Date().toLocaleString(), createdAt: new Date() };
+      const tenant = { id: Date.now(), name: String(body.name).trim(), idNumber, phone: phone.startsWith('0') ? '+254' + phone.slice(1) : phone, houseNo: body.houseNo, dateEntered: body.dateEntered, expected, paid, balance: Math.max(0, expected - paid), status: 'pending', paymentHistory: paid > 0 ? [{ amount: paid, totalPaid: paid, date: new Date().toISOString(), source: 'Tenant registration' }] : [], timestamp: new Date().toLocaleString(), createdAt: new Date() };
       await tenants.insertOne(tenant);
       return res.status(201).json({ tenant: cleanTenant(tenant) });
     }
 
     if (req.method === 'PATCH') {
-      const { id, status, paid } = req.body || {};
-      if (!id || (status === undefined && paid === undefined)) return res.status(400).json({ error: 'A tenant ID and status or payment are required.' });
+      const { id, status, paid, paymentAmount } = req.body || {};
+      if (!id || (status === undefined && paid === undefined && paymentAmount === undefined)) return res.status(400).json({ error: 'A tenant ID and status or payment are required.' });
       if (status !== undefined && !['accepted', 'declined'].includes(status)) return res.status(400).json({ error: 'Invalid tenant status.' });
       if (paid !== undefined && (!Number.isFinite(Number(paid)) || Number(paid) < 0)) return res.status(400).json({ error: 'Payment must be a non-negative number.' });
+      if (paymentAmount !== undefined && (!Number.isFinite(Number(paymentAmount)) || Number(paymentAmount) <= 0)) return res.status(400).json({ error: 'Payment amount must be greater than zero.' });
       const tenant = await tenants.findOne({ id: Number(id) });
       if (!tenant) return res.status(404).json({ error: 'Tenant not found.' });
       if (status === 'accepted' && await tenants.findOne({ houseNo: tenant.houseNo, status: 'accepted', id: { $ne: Number(id) } })) return res.status(409).json({ error: `Room ${tenant.houseNo} is already occupied.` });
       const update = { updatedAt: new Date() };
       if (status !== undefined) update.status = status;
-      if (paid !== undefined) { update.paid = Number(paid); update.balance = Number(tenant.expected) - Number(paid); }
-      await tenants.updateOne({ id: Number(id) }, { $set: update });
+      const nextPaid = paymentAmount !== undefined ? Number(tenant.paid || 0) + Number(paymentAmount) : paid !== undefined ? Number(paid) : undefined;
+      if (nextPaid !== undefined) { update.paid = nextPaid; update.balance = Math.max(0, Number(tenant.expected) - nextPaid); }
+      const operation = { $set: update };
+      if (paymentAmount !== undefined || (paid !== undefined && Number(paid) > Number(tenant.paid || 0))) {
+        const amount = paymentAmount !== undefined ? Number(paymentAmount) : Number(paid) - Number(tenant.paid || 0);
+        operation.$push = { paymentHistory: { amount, totalPaid: nextPaid, date: new Date().toISOString(), source: 'Management' } };
+      }
+      await tenants.updateOne({ id: Number(id) }, operation);
       return res.status(200).json({ ok: true });
     }
 

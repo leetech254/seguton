@@ -73,7 +73,7 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
 .btn-accept{background:#27ae60; color:white;}.btn-decline{background:#e74c3c; color:white;}
 .btn-report{background:#f1c40f; color:#000; padding:10px 18px; border:none; border-radius:8px; font-weight:bold; cursor:pointer;}
 .status-msg{text-align:center; margin-top:10px; font-weight:bold;}
-.auth-card{max-width:460px}.auth-card .submit{margin-top:10px}.muted-link{background:none;border:0;color:#2c3e50;text-decoration:underline;cursor:pointer;margin:12px auto 0;display:block}.settings-panel{max-width:560px;margin:0 auto 18px}.danger{background:#e74c3c!important;color:#fff!important}.toast-container{position:fixed;right:20px;bottom:20px;z-index:9999;display:flex;flex-direction:column;gap:10px;max-width:min(380px,calc(100vw - 40px))}.toast{padding:14px 16px;border-radius:10px;color:white;box-shadow:0 8px 25px rgba(0,0,0,.25);font-weight:600;animation:toast-in .2s ease-out}.toast.error{background:#c0392b}.toast.success{background:#198754}.toast.info{background:#2c3e50}@keyframes toast-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.auth-card{max-width:460px}.tenant-portal-card{max-width:760px}.portal-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:20px 0}.portal-stat{padding:16px;border-radius:12px;background:#f5f7fa}.portal-stat strong{display:block;font-size:22px;color:#2c3e50}.portal-stat span{font-size:12px;color:#667085}.payment-history{width:100%;border-collapse:collapse;margin-top:16px}.payment-history th,.payment-history td{padding:10px;text-align:left;border-bottom:1px solid #e5e7eb}.portal-actions{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-top:18px}@media(max-width:520px){.portal-summary{grid-template-columns:1fr}.payment-history{font-size:13px}}.auth-card .submit{margin-top:10px}.muted-link{background:none;border:0;color:#2c3e50;text-decoration:underline;cursor:pointer;margin:12px auto 0;display:block}.settings-panel{max-width:560px;margin:0 auto 18px}.danger{background:#e74c3c!important;color:#fff!important}.toast-container{position:fixed;right:20px;bottom:20px;z-index:9999;display:flex;flex-direction:column;gap:10px;max-width:min(380px,calc(100vw - 40px))}.toast{padding:14px 16px;border-radius:10px;color:white;box-shadow:0 8px 25px rgba(0,0,0,.25);font-weight:600;animation:toast-in .2s ease-out}.toast.error{background:#c0392b}.toast.success{background:#198754}.toast.info{background:#2c3e50}@keyframes toast-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:15px}.toolbar input,.toolbar select{width:auto;min-width:180px}.toolbar button{padding:10px 14px;border:0;border-radius:8px;background:#2c3e50;color:white;font-weight:600;cursor:pointer}.sync-status{font-size:13px;color:#667085;margin-left:auto}.empty-state{text-align:center;color:#667085;padding:25px}.btn-payment{background:#3498db;color:white}
 </style>
 </head>
@@ -84,6 +84,7 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
   <h2>🏠 SEGUTON</h2>
   <div class="nav-links">
     <button id="btnTenant" class="active" onclick="showPage('tenantPage')">Tenants Entry</button>
+    <button id="btnTenantPortal" onclick="showPage('tenantPortalPage')">Tenant Login</button>
     <button id="btnManage" onclick="openManagement()">Management</button>
   </div>
 </div>
@@ -146,6 +147,26 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
 </div>
 
 
+
+<!-- TENANT PORTAL -->
+<div id="tenantPortalPage" class="page">
+  <div class="card auth-card tenant-portal-card">
+    <div id="tenantPortalLogin">
+      <h1>Tenant Portal</h1>
+      <p class="sub">Check your application, payment history, and current balance.</p>
+      <form id="tenantPortalForm">
+        <label>Full Name</label><input type="text" id="tenantLoginName" required autocomplete="name" placeholder="John Kiprop">
+        <label>Kenyan National ID Number</label><input type="text" id="tenantLoginId" required inputmode="numeric" minlength="8" maxlength="8" pattern="[0-9]{8}" placeholder="12345678">
+        <label>Phone Number</label><input type="tel" id="tenantLoginPhone" required inputmode="tel" autocomplete="tel" placeholder="+254 712 345 678 or 0712 345 678">
+        <button id="tenantPortalSubmit" type="submit" class="submit">View my payments</button>
+      </form>
+      <div id="tenantPortalStatus" class="status-msg"></div>
+      <button class="muted-link" onclick="showPage('tenantPage')">Back to registration</button>
+    </div>
+    <div id="tenantPortalContent" style="display:none"></div>
+  </div>
+</div>
+
 <!-- ADMIN LOGIN / FIRST-TIME SETUP -->
 <div id="loginPage" class="page">
   <div class="card auth-card">
@@ -201,6 +222,15 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
         <button type="submit" class="submit danger">Delete administrator account</button>
         <div id="deleteStatus" class="status-msg"></div>
       </form>
+    </div>
+    <div id="paymentPanel" class="panel" style="display:none">
+      <h2>Record tenant payment</h2>
+      <p id="paymentTenantName" class="sub"></p>
+      <form id="paymentForm" class="row">
+        <div><label>Amount received (Ksh)</label><input type="number" id="paymentAmount" min="1" step="1" required placeholder="Amount needed"></div>
+        <div style="display:flex;align-items:end;gap:8px"><button type="submit" class="submit">Save payment</button><button type="button" onclick="closePaymentPanel()">Cancel</button></div>
+      </form>
+      <small class="field-help">Enter the new amount received. It will be added to the tenant’s existing total and shown in the tenant portal.</small>
     </div>
     <div class="stats">
       <div class="stat"><h3 id="totalRooms">14</h3><p>Total Rooms</p></div>
@@ -286,6 +316,24 @@ async function loadPublicRooms(){
     document.getElementById('tenantStatus').style.color='crimson';
   }
 }
+function tenantPortalRequest(body){
+  return fetch('/api/tenant',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+    .then(async response=>{ const payload=await response.json().catch(()=>({error:'Tenant portal returned an invalid response.'})); if(!response.ok) throw new Error(payload.error||'Tenant portal request failed.'); return payload; });
+}
+function renderTenantPortal(data){
+  const records=data.tenants||[];
+  const content=document.getElementById('tenantPortalContent');
+  const latest=records[0];
+  const history=records.flatMap(t=>(t.paymentHistory||[]).map(payment=>({...payment,houseNo:t.houseNo}))).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  content.innerHTML=`<h1>Welcome, ${escapeHtml(latest.name)}</h1><p class="sub">Your payment information is updated from the estate database.</p>
+    <div class="portal-summary"><div class="portal-stat"><strong>Ksh ${Number(records.reduce((sum,t)=>sum+Number(t.expected||0),0)).toLocaleString()}</strong><span>Total expected</span></div><div class="portal-stat"><strong>Ksh ${Number(records.reduce((sum,t)=>sum+Number(t.paid||0),0)).toLocaleString()}</strong><span>Total paid</span></div><div class="portal-stat"><strong>Ksh ${Number(records.reduce((sum,t)=>sum+Math.max(0,Number(t.balance||0)),0)).toLocaleString()}</strong><span>Current balance</span></div></div>
+    <h2>My applications</h2><div style="overflow:auto"><table class="payment-history"><thead><tr><th>Room</th><th>Status</th><th>Expected</th><th>Paid</th><th>Balance</th></tr></thead><tbody>${records.map(t=>`<tr><td>${escapeHtml(t.houseNo)}</td><td>${escapeHtml(t.status)}</td><td>Ksh ${Number(t.expected||0).toLocaleString()}</td><td>Ksh ${Number(t.paid||0).toLocaleString()}</td><td>Ksh ${Number(t.balance||0).toLocaleString()}</td></tr>`).join('')}</tbody></table></div>
+    <h2>Payment history</h2>${history.length?`<div style="overflow:auto"><table class="payment-history"><thead><tr><th>Date</th><th>Room</th><th>Amount</th><th>Source</th></tr></thead><tbody>${history.map(payment=>`<tr><td>${escapeHtml(new Date(payment.date).toLocaleString())}</td><td>${escapeHtml(payment.houseNo)}</td><td>Ksh ${Number(payment.amount||0).toLocaleString()}</td><td>${escapeHtml(payment.source||'Payment')}</td></tr>`).join('')}</tbody></table></div>`:'<p class="sub">No payments have been recorded yet.</p>'}
+    <div class="portal-actions"><span class="welcome-note">Contact management if a payment needs correction.</span><button class="submit" onclick="logoutTenantPortal()">Log out</button></div>`;
+  document.getElementById('tenantPortalLogin').style.display='none'; content.style.display='block';
+}
+function logoutTenantPortal(){ document.getElementById('tenantPortalContent').style.display='none'; document.getElementById('tenantPortalContent').innerHTML=''; document.getElementById('tenantPortalLogin').style.display='block'; document.getElementById('tenantPortalForm').reset(); showToast('Tenant portal logged out.','success'); showPage('tenantPage'); }
+
 async function authRequest(method, body){
   const response = await fetch('/api/auth', {method, credentials:'include', headers:{'Content-Type':'application/json'}, body:body ? JSON.stringify(body) : undefined});
   const raw = await response.text();
@@ -365,6 +413,7 @@ function showPage(pageId){
   document.querySelectorAll('.nav-links button').forEach(b=>{b.classList.remove('active');b.removeAttribute('aria-current');});
   document.getElementById(pageId).classList.add('active');
   if(pageId==='tenantPage'){ document.getElementById('btnTenant').classList.add('active'); document.getElementById('btnTenant').setAttribute('aria-current','page'); }
+  if(pageId==='tenantPortalPage'){ document.getElementById('btnTenantPortal').classList.add('active'); document.getElementById('btnTenantPortal').setAttribute('aria-current','page'); }
   if(pageId==='managePage'){ document.getElementById('btnManage').classList.add('active'); document.getElementById('btnManage').setAttribute('aria-current','page'); renderManagement(); }
 }
 
@@ -392,6 +441,16 @@ function normalizePhone(value){
 }
 
 document.getElementById('dateEntered').valueAsDate = new Date();
+
+document.getElementById('tenantPortalForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const button=document.getElementById('tenantPortalSubmit'); setButtonBusy(button,true,'Checking…');
+  try{
+    const data=await tenantPortalRequest({name:document.getElementById('tenantLoginName').value,idNumber:document.getElementById('tenantLoginId').value,phone:document.getElementById('tenantLoginPhone').value});
+    renderTenantPortal(data); showToast('Payment information loaded.','success');
+  }catch(error){ document.getElementById('tenantPortalStatus').innerText=error.message; document.getElementById('tenantPortalStatus').style.color='crimson'; showToast(error.message); }
+  finally{ setButtonBusy(button,false); }
+});
 
 document.getElementById('setupForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
@@ -487,15 +546,26 @@ document.getElementById('tenantForm').addEventListener('submit', async (e)=>{
 function escapeHtml(value){
   return String(value ?? '').replace(/[&<>\"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[character]));
 }
+let paymentTenantId = null;
 function recordPayment(id){
   const tenant = tenants.find(t=>t.id===id);
   if(!tenant) return;
-  const value = prompt(`Enter total amount paid by ${tenant.name}:`, tenant.paid || 0);
-  if(value === null) return;
-  const paid = Number(value);
-  if(!Number.isFinite(paid) || paid < 0){ showToast('Enter a valid non-negative amount.'); return; }
-  apiRequest('PATCH', {id, paid}).then(()=>{showToast('Payment updated.','success'); return syncFromDatabase();}).catch(error=>showToast(error.message));
+  paymentTenantId = id;
+  document.getElementById('paymentTenantName').innerText = `${tenant.name} • ${tenant.houseNo} • Balance needed: Ksh ${Math.max(0,Number(tenant.balance||0)).toLocaleString()}`;
+  document.getElementById('paymentAmount').value = Math.max(0,Number(tenant.balance||0)) || '';
+  document.getElementById('paymentPanel').style.display='block';
+  document.getElementById('paymentAmount').focus();
+  document.getElementById('paymentPanel').scrollIntoView({behavior:'smooth',block:'center'});
 }
+function closePaymentPanel(){ paymentTenantId=null; document.getElementById('paymentPanel').style.display='none'; document.getElementById('paymentForm').reset(); }
+document.getElementById('paymentForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  if(!paymentTenantId) return;
+  const amount=Number(document.getElementById('paymentAmount').value);
+  if(!Number.isFinite(amount) || amount<=0){ showToast('Enter a payment amount greater than zero.'); return; }
+  try{ await apiRequest('PATCH',{id:paymentTenantId,paymentAmount:amount}); closePaymentPanel(); showToast('Payment saved and tenant balance updated.','success'); await syncFromDatabase(); }
+  catch(error){ showToast(error.message); }
+});
 function renderManagement(){
   const grid = document.getElementById('roomGrid');
   grid.innerHTML = rooms.length ? rooms.map(r=>`<div class="room ${r.status}">${escapeHtml(r.id)}<br><small>${escapeHtml(r.type)}</small><br>${r.status==='available'?'✅ Available':'👤 '+escapeHtml(r.tenant)}<br><small>Ksh ${Number(r.rent || rentPrices[r.id] || 0).toLocaleString()}</small></div>`).join('') : '<div class="empty-state">No rooms were returned by the database. Refresh after checking the database connection.</div>';

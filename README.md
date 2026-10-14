@@ -19,6 +19,8 @@ A browser-based rental and tenant management system.
 - Non-blocking toast notifications for API errors, validation failures, authentication, payments, and successful actions
 - Faster first paint with deferred reporting-library loading, request loading states, disabled duplicate-submit protection, and accessible active navigation
 - Tenant registration collects normalized Kenyan phone numbers, validates the 8-digit Kenyan National ID format, auto-fills the full room payment, and only shows available rooms
+- Tenant Portal login using name, National ID, and phone number shows applications, payment history, total paid, and live balance
+- Management payment entry accepts the amount received, adds it to the tenant total, and makes the new payment visible in the Tenant Portal
 
 ## Deploy to Vercel with a Database
 
