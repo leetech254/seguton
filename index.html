@@ -111,7 +111,7 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
   <h2>🏠 SEGUTON</h2>
   <div class="nav-links">
     <button id="btnTenant" class="active" onclick="showPage('tenantPage')">Tenants Entry</button>
-    <button id="btnTenantPortal" onclick="showPage('tenantPortalPage')">Payments</button>
+    <button id="btnTenantPortal" onclick="showPage('tenantPortalPage')">Pay rent with M-Pesa</button>
     <button id="btnManage" onclick="openManagement()">Management</button>
   </div>
 </div>
@@ -180,13 +180,13 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
 <div id="tenantPortalPage" class="page">
   <div class="card auth-card tenant-portal-card">
     <div id="tenantPortalLogin">
-      <h1>Tenant Portal</h1>
-      <p class="sub">Check your application, payment history, and current balance.</p>
+      <h1>Pay rent with M-Pesa</h1>
+      <p class="sub">Check payment history, view your balance, and send an M-Pesa STK prompt.</p>
       <form id="tenantPortalForm">
         <label>Full Name</label><input type="text" id="tenantLoginName" required autocomplete="name" placeholder="John Kiprop">
         <label>Kenyan National ID Number</label><input type="text" id="tenantLoginId" required inputmode="numeric" minlength="8" maxlength="8" pattern="[0-9]{8}" placeholder="12345678">
-        <label>Phone Number</label><input type="tel" id="tenantLoginPhone" required inputmode="tel" autocomplete="tel" placeholder="+254 712 345 678 or 0712 345 678">
-        <button id="tenantPortalSubmit" type="submit" class="submit">View my payments</button>
+        <label>Phone Number for payment prompt</label><input type="tel" id="tenantLoginPhone" required inputmode="tel" autocomplete="tel" placeholder="+254 712 345 678 or 0712 345 678">
+        <button id="tenantPortalSubmit" type="submit" class="submit">Check history and pay rent</button>
       </form>
       <div id="tenantPortalStatus" class="status-msg"></div>
       <button class="muted-link" onclick="showPage('tenantPage')">Back to registration</button>
@@ -357,7 +357,8 @@ function renderTenantPortal(data){
   const content=document.getElementById('tenantPortalContent');
   const latest=records[0];
   const history=records.flatMap(t=>(t.paymentHistory||[]).map(payment=>({...payment,houseNo:t.houseNo}))).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
-  const paymentForms=records.filter(t=>Number(t.balance||0)>0).map(t=>`<div class="portal-actions"><span><strong>${escapeHtml(t.houseNo)}</strong> needs Ksh ${Number(t.balance).toLocaleString()}</span><div><input id="tenantPay-${t.id}" type="number" min="1" max="${Number(t.balance)}" value="${Number(t.balance)}" style="width:130px" aria-label="Payment amount for ${escapeHtml(t.houseNo)}"><button class="submit" onclick="startTenantStkPayment(${Number(t.id)})">Send STK Prompt</button></div></div>`).join('');
+  const paymentPhone=escapeHtml(document.getElementById('tenantLoginPhone')?.value || latest.phone || '');
+  const paymentForms=records.filter(t=>Number(t.balance||0)>0).map(t=>`<div class="portal-actions"><span><strong>${escapeHtml(t.houseNo)}</strong> needs Ksh ${Number(t.balance).toLocaleString()}</span><div><input id="tenantPaymentPhone-${t.id}" type="tel" value="${paymentPhone}" placeholder="07xx or +254" aria-label="Phone number for STK prompt"><input id="tenantPay-${t.id}" type="number" min="1" max="${Number(t.balance)}" value="${Number(t.balance)}" style="width:130px" aria-label="Payment amount for ${escapeHtml(t.houseNo)}"><button class="submit" onclick="startTenantStkPayment(${Number(t.id)})">Send STK Prompt</button></div></div>`).join('');
   content.innerHTML=`<h1>Welcome, ${escapeHtml(latest.name)}</h1><p class="sub">Your payment information is updated from the estate database.</p>
     <div class="portal-summary"><div class="portal-stat"><strong>Ksh ${Number(records.reduce((sum,t)=>sum+Number(t.expected||0),0)).toLocaleString()}</strong><span>Total expected</span></div><div class="portal-stat"><strong>Ksh ${Number(records.reduce((sum,t)=>sum+Number(t.paid||0),0)).toLocaleString()}</strong><span>Total paid</span></div><div class="portal-stat"><strong>Ksh ${Number(records.reduce((sum,t)=>sum+Math.max(0,Number(t.balance||0)),0)).toLocaleString()}</strong><span>Current balance</span></div></div>
     ${paymentForms?`<h2>Pay outstanding balance</h2>${paymentForms}`:'<p class="sub">Your current balance is fully paid.</p>'}
@@ -376,7 +377,7 @@ async function startTenantStkPayment(tenantId){
   const amount=Number(document.getElementById('tenantPay-'+tenantId)?.value);
   if(!Number.isInteger(amount) || amount<1){ showToast('Enter a valid payment amount.'); return; }
   try{
-    const response=await fetch('/api/stkpush',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tenantId,amount,name:document.getElementById('tenantLoginName').value,idNumber:document.getElementById('tenantLoginId').value,phone:document.getElementById('tenantLoginPhone').value})});
+    const response=await fetch('/api/stkpush',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tenantId,amount,name:document.getElementById('tenantLoginName').value,idNumber:document.getElementById('tenantLoginId').value,phone:document.getElementById('tenantPaymentPhone-'+tenantId)?.value || document.getElementById('tenantLoginPhone').value})});
     const payload=await response.json().catch(()=>({error:'STK Push returned an invalid response.'}));
     if(!response.ok) throw new Error(payload.error||'Unable to send STK prompt.');
     showToast(payload.message||'STK prompt sent. Check your phone for the M-Pesa PIN.','success');
