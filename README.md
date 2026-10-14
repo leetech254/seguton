@@ -22,6 +22,7 @@ A browser-based rental and tenant management system.
 - Tenant Portal login using name, National ID, and phone number shows applications, payment history, total paid, and live balance
 - Management payment entry accepts the amount received, adds it to the tenant total, and makes the new payment visible in the Tenant Portal
 - Admin payment-history deletion requires confirmation and resets the tenant paid total to Ksh 0 with the full balance restored
+- Admin monthly rent generation adds one base-rent charge per accepted tenant, updates balances, and prevents duplicate charges for the same month
 - Tenant Portal STK Push payments through CourtneyTech with server-side credentials and confirmed-payment callbacks; successful registration opens this payment flow instead of the admin dashboard
 - Admin dashboard live polling with toast and banner notifications for confirmed M-Pesa payments, including amount, room, and receipt
 
@@ -52,6 +53,7 @@ The app requires the API and database environment variables. If the database is 
 - `PATCH /api/data` with `{ "id": 123, "status": "accepted" | "declined" }` — updates an application
 - `PATCH /api/data` with `{ "id": 123, "paid": 5000 }` — records a tenant payment and recalculates the balance
 - `PATCH /api/data` with `{ "id": 123, "action": "delete-payment-history", "confirmation": "DELETE" }` — admin-only destructive reset of payment history and paid total
+- `PATCH /api/data` with `{ "action": "generate-monthly-rent", "month": "2026-10" }` — admin-only idempotent monthly rent generation for accepted tenants
 - `/api/auth` — one-time administrator setup, login, logout, session status, and password changes
 - `POST /api/tenant` — verifies tenant name, 8-digit ID, and phone and returns applications/payment history
 - `POST /api/stkpush` — sends an STK prompt for an outstanding tenant balance; payment is not credited until the provider callback confirms success

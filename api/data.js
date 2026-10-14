@@ -36,14 +36,34 @@ module.exports = async (req, res) => {
       if (!Number.isFinite(expected) || !Number.isFinite(paid) || paid < 0) return res.status(400).json({ error: 'Expected rent and payment must be valid numbers.' });
       if (await tenants.findOne({ houseNo: body.houseNo, status: 'accepted' })) return res.status(409).json({ error: `Room ${body.houseNo} is already occupied.` });
       if (await tenants.findOne({ idNumber: idNumber, status: { $in: ['pending', 'accepted'] } })) return res.status(409).json({ error: 'An active application already exists for this ID number.' });
-      const tenant = { id: Date.now(), name: String(body.name).trim(), idNumber, phone: phone.startsWith('0') ? '+254' + phone.slice(1) : phone, houseNo: body.houseNo, dateEntered: body.dateEntered, expected, paid, balance: Math.max(0, expected - paid), status: 'pending', paymentHistory: paid > 0 ? [{ amount: paid, totalPaid: paid, date: new Date().toISOString(), source: 'Tenant registration' }] : [], timestamp: new Date().toLocaleString(), createdAt: new Date() };
+      const tenant = { id: Date.now(), name: String(body.name).trim(), idNumber, phone: phone.startsWith('0') ? '+254' + phone.slice(1) : phone, houseNo: body.houseNo, dateEntered: body.dateEntered, monthlyRent: expected, expected, paid, balance: Math.max(0, expected - paid), status: 'pending', paymentHistory: paid > 0 ? [{ amount: paid, totalPaid: paid, date: new Date().toISOString(), source: 'Tenant registration' }] : [], timestamp: new Date().toLocaleString(), createdAt: new Date() };
       await tenants.insertOne(tenant);
       return res.status(201).json({ tenant: cleanTenant(tenant) });
     }
 
     if (req.method === 'PATCH') {
-      const { id, status, paid, paymentAmount, action, confirmation } = req.body || {};
-      if (!id || (status === undefined && paid === undefined && paymentAmount === undefined && action !== 'delete-payment-history')) return res.status(400).json({ error: 'A tenant ID and status or payment are required.' });
+      const { id, status, paid, paymentAmount, action, confirmation, month } = req.body || {};
+      if (!id && !['delete-payment-history', 'generate-monthly-rent'].includes(action)) return res.status(400).json({ error: 'A tenant ID and status or payment are required.' });
+      if (action === 'generate-monthly-rent') {
+        const rentMonth = String(month || new Date().toISOString().slice(0, 7));
+        if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(rentMonth)) return res.status(400).json({ error: 'Month must use YYYY-MM format.' });
+        const accepted = await tenants.find({ status: 'accepted' }).toArray();
+        let generated = 0; let skipped = 0; let total = 0;
+        for (const record of accepted) {
+          const monthlyRent = Number(record.monthlyRent || record.expected || 0);
+          if (!Number.isFinite(monthlyRent) || monthlyRent <= 0) { skipped += 1; continue; }
+          const result = await tenants.updateOne(
+            { id: record.id, status: 'accepted', 'rentCharges.month': { $ne: rentMonth } },
+            {
+              $inc: { expected: monthlyRent },
+              $set: { monthlyRent, balance: Math.max(0, Number(record.expected || 0) + monthlyRent - Number(record.paid || 0)), updatedAt: new Date() },
+              $push: { rentCharges: { month: rentMonth, amount: monthlyRent, generatedAt: new Date().toISOString(), source: 'Monthly rent generation' } }
+            }
+          );
+          if (result.modifiedCount) { generated += 1; total += monthlyRent; } else skipped += 1;
+        }
+        return res.status(200).json({ ok: true, month: rentMonth, generated, skipped, total, message: generated ? `Generated Ksh ${total.toLocaleString()} for ${generated} tenant${generated === 1 ? '' : 's'}.` : `Monthly rent for ${rentMonth} was already generated.` });
+      }
       if (status !== undefined && !['accepted', 'declined'].includes(status)) return res.status(400).json({ error: 'Invalid tenant status.' });
       if (paid !== undefined && (!Number.isFinite(Number(paid)) || Number(paid) < 0)) return res.status(400).json({ error: 'Payment must be a non-negative number.' });
       if (paymentAmount !== undefined && (!Number.isFinite(Number(paymentAmount)) || Number(paymentAmount) <= 0)) return res.status(400).json({ error: 'Payment amount must be greater than zero.' });
