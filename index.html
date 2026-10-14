@@ -738,7 +738,7 @@ function renderManagement(){
     <td>${escapeHtml(t.name)}</td><td>${escapeHtml(t.idNumber)}</td><td>${escapeHtml(t.phone || '-')}</td><td>${escapeHtml(t.houseNo)}</td><td>${escapeHtml(t.dateEntered)}</td>
     <td>${Number(t.expected||0).toLocaleString()}</td><td>${Number(t.feesTotal||0).toLocaleString()}</td><td>${Number(t.paid||0).toLocaleString()}</td><td style="color:${t.balance>0?'red':'green'}">${Number(t.balance||0).toLocaleString()}</td>
     <td><span class="badge ${t.status}">${t.status}</span></td>
-    <td>${t.status==='pending'?`<button class="btn-small btn-accept" onclick="approveTenant(${t.id})">Accept</button><button class="btn-small btn-decline" onclick="declineTenant(${t.id})">Decline</button>`:t.status==='accepted'?`<button class="btn-small btn-payment" onclick="recordPayment(${t.id})">Record payment</button><button class="btn-small" onclick="openFeePanel(${t.id})">Add fee</button>`:'-'}${Number(t.paid||0)>0 || (t.paymentHistory||[]).length?`<button class="btn-small btn-decline" onclick="deletePaymentHistory(${t.id})">Delete payment history</button>`:''}</td>
+    <td>${t.status==='pending'?`<button class="btn-small btn-accept" onclick="approveTenant(${t.id})">Accept</button><button class="btn-small btn-decline" onclick="declineTenant(${t.id})">Decline</button>`:t.status==='accepted'?`<button class="btn-small btn-payment" onclick="recordPayment(${t.id})">Record payment</button><button class="btn-small" onclick="openFeePanel(${t.id})">Add fee</button>`:'-'}${Number(t.paid||0)>0 || (t.paymentHistory||[]).length?`<button class="btn-small btn-decline" onclick="deletePaymentHistory(${t.id})">Delete payment history</button>`:''}<button class="btn-small btn-decline" onclick="deleteTenant(${t.id})">Delete tenant</button></td>
   </tr>`).join('') : '<tr><td colspan="11" class="empty-state">No database records match your filters.</td></tr>';
 }
 
@@ -782,6 +782,19 @@ async function declineTenant(id){
     showToast(error.message);
   }
   renderManagement();
+}
+async function deleteTenant(id){
+  const tenant=tenants.find(t=>t.id===id);
+  if(!tenant) return;
+  if(!confirm(`Permanently remove ${tenant.name} and all their payment, fee, and application details? Room ${tenant.houseNo} will become available for another tenant.`)) return;
+  const confirmation=prompt('This permanently deletes the tenant record. Type DELETE TENANT to continue:');
+  if(confirmation!=='DELETE TENANT'){ showToast('Tenant was not deleted. Type DELETE TENANT exactly to confirm.'); return; }
+  try{
+    const result=await apiRequest('PATCH',{id,action:'delete-tenant',confirmation});
+    showToast(result.message||'Tenant deleted and room released.','success',7000);
+    await syncFromDatabase();
+    setAdminTab('tenants');
+  }catch(error){ showToast(error.message); }
 }
 
 let feeTenantId = null;

@@ -22,6 +22,7 @@ A browser-based rental and tenant management system.
 - Tenant Portal login using name, National ID, and phone number shows applications, payment history, total paid, and live balance
 - Management payment entry accepts the amount received, adds it to the tenant total, and makes the new payment visible in the Tenant Portal
 - Admin payment-history deletion requires confirmation and resets the tenant paid total to Ksh 0 with the full balance restored
+- Admin tenant deletion permanently removes the application, payment, fee, and personal details after typed `DELETE TENANT` confirmation; the tenant's room is immediately available again
 - Admin monthly rent generation adds one base-rent charge per accepted tenant, updates balances, and prevents duplicate charges for the same month
 - Admin fee management for Water, Electricity, Service charge, Garbage collection, Penalty, and custom fees with descriptions, tenant-visible charge history, balance updates, and Excel reporting
 - Tenant Portal STK Push payments through CourtneyTech with server-side credentials and confirmed-payment callbacks; successful registration opens this payment flow instead of the admin dashboard
@@ -60,6 +61,7 @@ The app requires the API and database environment variables. If the database is 
 - `PATCH /api/data` with `{ "id": 123, "status": "accepted" | "declined" }` — updates an application
 - `PATCH /api/data` with `{ "id": 123, "paid": 5000 }` — records a tenant payment and recalculates the balance
 - `PATCH /api/data` with `{ "id": 123, "action": "delete-payment-history", "confirmation": "DELETE" }` — admin-only destructive reset of payment history and paid total
+- `PATCH /api/data` with `{ "id": 123, "action": "delete-tenant", "confirmation": "DELETE TENANT" }` — admin-only permanent tenant deletion; the removed tenant's room is released automatically
 - `PATCH /api/data` with `{ "action": "generate-monthly-rent", "month": "2026-10" }` — admin-only idempotent monthly rent generation for accepted tenants
 - `PATCH /api/data` with `{ "id": 123, "action": "add-fee", "feeCategory": "Water", "feeAmount": 500, "feeDescription": "October water bill" }` — admin-only fee assessment and balance update
 - Monthly rent generation and fee assessment automatically attempt to notify the tenant by SMS and/or email with the charge amount, room, and updated balance
