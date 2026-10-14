@@ -3,6 +3,12 @@ const { hashPassword, verifyPassword, setSession, clearSession, readSession, req
 
 function normalizeEmail(value) { return String(value || '').trim().toLowerCase(); }
 function validPassword(value) { return typeof value === 'string' && value.length >= 8; }
+function normalizePhone(value) {
+  const compact = String(value || '').replace(/[\s-]/g, '');
+  if (/^0[17]\d{8}$/.test(compact)) return '+254' + compact.slice(1);
+  return /^\+254[17]\d{8}$/.test(compact) ? compact : null;
+}
+function validEmail(value) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value); }
 function publicAdmin(admin) { return { email: admin.email, phone: admin.phone, createdAt: admin.createdAt }; }
 
 module.exports = async (req, res) => {
@@ -27,8 +33,8 @@ module.exports = async (req, res) => {
     if (body.action === 'setup') {
       if (adminCount > 0) return res.status(409).json({ error: 'Administrator account already exists. Use login instead.' });
       const email = normalizeEmail(body.email);
-      const phone = String(body.phone || '').trim();
-      if (!email || !email.includes('@') || !phone || !validPassword(body.password)) return res.status(400).json({ error: 'Enter a valid email, phone number, and password with at least 8 characters.' });
+      const phone = normalizePhone(body.phone);
+      if (!validEmail(email) || !phone || !validPassword(body.password)) return res.status(400).json({ error: 'Enter a valid email, Kenyan phone number, and password with at least 8 characters.' });
       const admin = { email, phone, passwordHash: await hashPassword(body.password), createdAt: new Date(), updatedAt: new Date() };
       await admins.insertOne(admin);
       setSession(res, admin);

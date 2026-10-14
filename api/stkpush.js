@@ -14,6 +14,13 @@ function callbackBase(req) {
   return `${protocol}://${host}`;
 }
 
+async function fetchWithTimeout(url, options = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 12000);
+  try { return await fetch(url, { ...options, signal: controller.signal }); }
+  finally { clearTimeout(timer); }
+}
+
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -51,7 +58,7 @@ module.exports = async (req, res) => {
 
     const reference = `R${String(tenant.id).slice(-10)}`.slice(0, 12);
     const callbackSecret = process.env.COURTNEY_CALLBACK_SECRET ? `?secret=${encodeURIComponent(process.env.COURTNEY_CALLBACK_SECRET)}` : '';
-    const response = await fetch(`${baseUrl}/v2/stkpush`, {
+    const response = await fetchWithTimeout(`${baseUrl}/v2/stkpush`, {
       method: 'POST',
       headers: { 'X-API-Key': apiKey, 'X-API-Secret': apiSecret, 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -65,13 +72,15 @@ module.exports = async (req, res) => {
       })
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok || payload.success === false) {
+    const checkoutRequestId = payload.checkoutRequestId || payload.checkout_request_id || null;
+    const transactionId = payload.transactionId || null;
+    if (!response.ok || payload.success === false || (!transactionId && !checkoutRequestId)) {
       return res.status(502).json({ error: payload.message || 'The STK Push provider rejected the request.' });
     }
 
     const pendingPayment = {
-      transactionId: payload.transactionId || null,
-      checkoutRequestId: payload.checkoutRequestId || payload.checkout_request_id || null,
+      transactionId,
+      checkoutRequestId,
       amount,
       status: 'pending',
       date: new Date().toISOString(),

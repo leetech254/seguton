@@ -29,17 +29,22 @@ module.exports = async (req, res) => {
       const required = ['name', 'idNumber', 'phone', 'houseNo', 'dateEntered', 'expected', 'paid'];
       if (required.some((field) => body[field] === undefined || body[field] === '')) return res.status(400).json({ error: 'All tenant fields are required.' });
       if (!Object.prototype.hasOwnProperty.call(ROOM_DEFINITIONS, body.houseNo)) return res.status(400).json({ error: 'Unknown room.' });
-      const expected = Number(body.expected); const paid = Number(body.paid);
+      const submittedExpected = Number(body.expected); const paid = Number(body.paid);
+      const expected = Number(ROOM_DEFINITIONS[body.houseNo]);
       const idNumber = String(body.idNumber).trim();
+      const name = String(body.name || '').trim();
+      if (name.length < 2 || name.length > 120) return res.status(400).json({ error: 'Enter a valid full name.' });
       if (!/^\d{8}$/.test(idNumber)) return res.status(400).json({ error: 'Kenyan National ID number must contain exactly 8 digits.' });
       const phone = String(body.phone).replace(/[\s-]/g, '');
       const email = String(body.email || '').trim().toLowerCase();
       if (!/^(?:\+254|0)[17]\d{8}$/.test(phone)) return res.status(400).json({ error: 'Enter a valid Kenyan phone number using +254 7xx/1xx or 07xx/01xx.' });
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Enter a valid email address.' });
-      if (!Number.isFinite(expected) || !Number.isFinite(paid) || paid < 0) return res.status(400).json({ error: 'Expected rent and payment must be valid numbers.' });
+      if (!Number.isFinite(submittedExpected) || submittedExpected !== expected || !Number.isFinite(paid) || paid < 0) return res.status(400).json({ error: 'The selected room rent is invalid. Refresh the room list and try again.' });
+      if (paid !== 0) return res.status(400).json({ error: 'Registration payments must be completed through the M-Pesa payment prompt.' });
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(body.dateEntered))) return res.status(400).json({ error: 'Enter a valid date entered.' });
       if (await tenants.findOne({ houseNo: body.houseNo, status: 'accepted' })) return res.status(409).json({ error: `Room ${body.houseNo} is already occupied.` });
       if (await tenants.findOne({ idNumber: idNumber, status: { $in: ['pending', 'accepted'] } })) return res.status(409).json({ error: 'An active application already exists for this ID number.' });
-      const tenant = { id: Date.now(), name: String(body.name).trim(), idNumber, email, phone: phone.startsWith('0') ? '+254' + phone.slice(1) : phone, houseNo: body.houseNo, dateEntered: body.dateEntered, monthlyRent: expected, expected, paid, feesTotal: 0, balance: Math.max(0, expected - paid), status: 'pending', paymentHistory: paid > 0 ? [{ amount: paid, totalPaid: paid, date: new Date().toISOString(), source: 'Tenant registration' }] : [], feeHistory: [], timestamp: new Date().toLocaleString(), createdAt: new Date() };
+      const tenant = { id: Date.now() * 1000 + Math.floor(Math.random() * 1000), name, idNumber, email, phone: phone.startsWith('0') ? '+254' + phone.slice(1) : phone, houseNo: body.houseNo, dateEntered: body.dateEntered, monthlyRent: expected, expected, paid: 0, feesTotal: 0, balance: expected, status: 'pending', paymentHistory: [], feeHistory: [], timestamp: new Date().toLocaleString(), createdAt: new Date() };
       await tenants.insertOne(tenant);
       await notifyAdmins(db, { title: 'New tenant application', details: `${tenant.name} applied for room ${tenant.houseNo}. Tenant email: ${email || 'not provided'}.` });
       return res.status(201).json({ tenant: cleanTenant(tenant), emailNotificationsEnabled: Boolean(email) });
@@ -95,6 +100,7 @@ module.exports = async (req, res) => {
       if (action === 'delete-payment-history') {
         if (confirmation !== 'DELETE') return res.status(400).json({ error: 'Type DELETE to confirm payment-history deletion.' });
         await tenants.updateOne({ id: Number(id) }, { $set: { paid: 0, balance: Number(tenant.expected || 0), paymentHistory: [], stkPayments: [], updatedAt: new Date() } });
+        await notifyAdmins(db, { title: 'Payment history deleted', details: `Payment history for ${tenant.name} (${tenant.houseNo}) was permanently deleted and their balance was reset.` });
         return res.status(200).json({ ok: true, message: 'Payment history deleted and tenant balance reset.' });
       }
       if (action === 'add-fee') {

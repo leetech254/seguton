@@ -28,11 +28,12 @@ module.exports = async (req, res) => {
     const paymentFilter = { id: tenant.id, stkPayments: { $elemMatch: { ...(transactionId ? { transactionId } : { checkoutRequestId }), status: { $ne: 'completed' } } } };
     if (paymentStatus === 'completed') {
       const amount = Number(payment.amount || data.amountKes || 0);
-      await tenants.updateOne(paymentFilter, {
+      const paymentUpdate = await tenants.updateOne(paymentFilter, {
         $inc: { paid: amount },
         $push: { paymentHistory: { amount, totalPaid: Number(tenant.paid || 0) + amount, date: new Date().toISOString(), source: 'M-Pesa STK Push', receipt: data.mpesaReceipt || null } },
         $set: { 'stkPayments.$.status': 'completed', 'stkPayments.$.receipt': data.mpesaReceipt || null, 'stkPayments.$.completedAt': new Date() }
       });
+      if (!paymentUpdate.modifiedCount) return res.status(200).json({ ok: true, duplicate: true });
       const updated = await tenants.findOne({ id: tenant.id });
       if (updated) {
         const balance = Math.max(0, Number(updated.expected || 0) - Number(updated.paid || 0));
