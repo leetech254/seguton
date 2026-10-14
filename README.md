@@ -22,6 +22,7 @@ A browser-based rental and tenant management system.
 - Tenant Portal login using name, National ID, and phone number shows applications, payment history, total paid, and live balance
 - Management payment entry accepts the amount received, adds it to the tenant total, and makes the new payment visible in the Tenant Portal
 - Tenant Portal STK Push payments through CourtneyTech with server-side credentials and confirmed-payment callbacks
+- Admin dashboard live polling with toast and banner notifications for confirmed M-Pesa payments, including amount, room, and receipt
 
 ## Deploy to Vercel with a Database
 

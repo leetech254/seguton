@@ -73,7 +73,7 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
 .btn-accept{background:#27ae60; color:white;}.btn-decline{background:#e74c3c; color:white;}
 .btn-report{background:#f1c40f; color:#000; padding:10px 18px; border:none; border-radius:8px; font-weight:bold; cursor:pointer;}
 .status-msg{text-align:center; margin-top:10px; font-weight:bold;}
-.auth-card{max-width:460px}.tenant-portal-card{max-width:760px}.portal-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:20px 0}.portal-stat{padding:16px;border-radius:12px;background:#f5f7fa}.portal-stat strong{display:block;font-size:22px;color:#2c3e50}.portal-stat span{font-size:12px;color:#667085}.payment-history{width:100%;border-collapse:collapse;margin-top:16px}.payment-history th,.payment-history td{padding:10px;text-align:left;border-bottom:1px solid #e5e7eb}.portal-actions{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-top:18px}@media(max-width:520px){.portal-summary{grid-template-columns:1fr}.payment-history{font-size:13px}}.auth-card .submit{margin-top:10px}.muted-link{background:none;border:0;color:#2c3e50;text-decoration:underline;cursor:pointer;margin:12px auto 0;display:block}.settings-panel{max-width:560px;margin:0 auto 18px}.danger{background:#e74c3c!important;color:#fff!important}.toast-container{position:fixed;right:20px;bottom:20px;z-index:9999;display:flex;flex-direction:column;gap:10px;max-width:min(380px,calc(100vw - 40px))}.toast{padding:14px 16px;border-radius:10px;color:white;box-shadow:0 8px 25px rgba(0,0,0,.25);font-weight:600;animation:toast-in .2s ease-out}.toast.error{background:#c0392b}.toast.success{background:#198754}.toast.info{background:#2c3e50}@keyframes toast-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.auth-card{max-width:460px}.tenant-portal-card{max-width:760px}.payment-alert{margin:16px 0;padding:16px 18px;border-left:5px solid #198754;border-radius:10px;background:#eaf8ef;color:#155724;box-shadow:0 4px 14px rgba(0,0,0,.08)}.payment-alert strong{display:block;margin-bottom:4px}.payment-alert button{float:right;background:transparent;color:#155724;border:0;font-size:20px;cursor:pointer}.portal-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:20px 0}.portal-stat{padding:16px;border-radius:12px;background:#f5f7fa}.portal-stat strong{display:block;font-size:22px;color:#2c3e50}.portal-stat span{font-size:12px;color:#667085}.payment-history{width:100%;border-collapse:collapse;margin-top:16px}.payment-history th,.payment-history td{padding:10px;text-align:left;border-bottom:1px solid #e5e7eb}.portal-actions{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-top:18px}@media(max-width:520px){.portal-summary{grid-template-columns:1fr}.payment-history{font-size:13px}}.auth-card .submit{margin-top:10px}.muted-link{background:none;border:0;color:#2c3e50;text-decoration:underline;cursor:pointer;margin:12px auto 0;display:block}.settings-panel{max-width:560px;margin:0 auto 18px}.danger{background:#e74c3c!important;color:#fff!important}.toast-container{position:fixed;right:20px;bottom:20px;z-index:9999;display:flex;flex-direction:column;gap:10px;max-width:min(380px,calc(100vw - 40px))}.toast{padding:14px 16px;border-radius:10px;color:white;box-shadow:0 8px 25px rgba(0,0,0,.25);font-weight:600;animation:toast-in .2s ease-out}.toast.error{background:#c0392b}.toast.success{background:#198754}.toast.info{background:#2c3e50}@keyframes toast-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:15px}.toolbar input,.toolbar select{width:auto;min-width:180px}.toolbar button{padding:10px 14px;border:0;border-radius:8px;background:#2c3e50;color:white;font-weight:600;cursor:pointer}.sync-status{font-size:13px;color:#667085;margin-left:auto}.empty-state{text-align:center;color:#667085;padding:25px}.btn-payment{background:#3498db;color:white}
 </style>
 </head>
@@ -223,6 +223,7 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
         <div id="deleteStatus" class="status-msg"></div>
       </form>
     </div>
+    <div id="paymentNotification" class="payment-alert" style="display:none" role="alert" aria-live="polite"></div>
     <div id="paymentPanel" class="panel" style="display:none">
       <h2>Record tenant payment</h2>
       <p id="paymentTenantName" class="sub"></p>
@@ -272,6 +273,9 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
 const rentPrices = {"S1":4500,"S4":4500,"S5":4740,"A1":4500,"B1":4500,"B2":4500,"B3":4500,"B4":4500,"B5":4500,"B6":4500,"B7":4500,"B8":4500,"B9":4500,"C1":7000};
 let tenants = [];
 let rooms = [];
+let knownMpesaPayments = new Set();
+let adminHasPaymentBaseline = false;
+let adminSyncTimer = null;
 function setButtonBusy(button, busy, label){
   if(!button) return;
   if(busy){ button.dataset.originalLabel=button.innerText; button.innerText=label; button.disabled=true; }
@@ -378,7 +382,10 @@ async function openManagement(){
     if(auth.authenticated){
       document.getElementById('adminIdentity').innerText='Administrator • '+auth.user.email;
       showPage('managePage');
+      knownMpesaPayments = new Set();
+      adminHasPaymentBaseline = false;
       await syncFromDatabase();
+      startAdminPaymentPolling();
     }else{
       showAuthMode(auth.setupRequired);
       showPage('loginPage');
@@ -394,6 +401,10 @@ async function logoutAdmin(){
     showToast('You have been logged out safely.','success');
   }catch(error){ showToast('Logout completed locally.','info'); }
   finally{
+    clearInterval(adminSyncTimer);
+    adminSyncTimer=null;
+    knownMpesaPayments = new Set();
+    adminHasPaymentBaseline = false;
     setButtonBusy(button,false);
     document.getElementById('settingsPanel').style.display='none';
     showPage('tenantPage');
@@ -403,12 +414,32 @@ function toggleSettings(){
   const panel=document.getElementById('settingsPanel');
   panel.style.display=panel.style.display==='none'?'block':'none';
 }
+function paymentKey(tenant,payment){ return `${tenant.id}:${payment.receipt||payment.date||payment.amount}`; }
+function inspectNewMpesaPayments(nextTenants){
+  const current=[];
+  nextTenants.forEach(tenant=>(tenant.paymentHistory||[]).filter(payment=>String(payment.source||'').toLowerCase().includes('m-pesa')).forEach(payment=>current.push({tenant,payment})));
+  const fresh=adminHasPaymentBaseline ? current.filter(item=>!knownMpesaPayments.has(paymentKey(item.tenant,item.payment))) : [];
+  current.forEach(item=>knownMpesaPayments.add(paymentKey(item.tenant,item.payment)));
+  adminHasPaymentBaseline=true;
+  if(!fresh.length) return;
+  const alert=document.getElementById('paymentNotification');
+  alert.innerHTML=`<button aria-label="Dismiss payment notification" onclick="this.parentElement.style.display='none'">×</button><strong>M-Pesa payment received</strong>${fresh.map(({tenant,payment})=>`${escapeHtml(tenant.name)} paid Ksh ${Number(payment.amount||0).toLocaleString()} for ${escapeHtml(tenant.houseNo)}${payment.receipt?` (Receipt: ${escapeHtml(payment.receipt)})`:''}`).join('<br>')}`;
+  alert.style.display='block';
+  fresh.forEach(({tenant,payment})=>showToast(`M-Pesa payment: ${tenant.name} paid Ksh ${Number(payment.amount||0).toLocaleString()}.`,'success',7000));
+}
+function startAdminPaymentPolling(){
+  clearInterval(adminSyncTimer);
+  adminSyncTimer=setInterval(()=>{ if(document.getElementById('managePage')?.classList.contains('active')) syncFromDatabase(); },15000);
+}
+
 async function syncFromDatabase(){
   const statusNode = document.getElementById('syncStatus');
   if(statusNode) statusNode.innerText = 'Syncing…';
   try{
     const data = await apiRequest('GET');
-    tenants = data.tenants || [];
+    const nextTenants = data.tenants || [];
+    inspectNewMpesaPayments(nextTenants);
+    tenants = nextTenants;
     rooms = data.rooms || [];
     renderManagement();
     if(statusNode){
