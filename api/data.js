@@ -36,7 +36,7 @@ module.exports = async (req, res) => {
       if (!Number.isFinite(expected) || !Number.isFinite(paid) || paid < 0) return res.status(400).json({ error: 'Expected rent and payment must be valid numbers.' });
       if (await tenants.findOne({ houseNo: body.houseNo, status: 'accepted' })) return res.status(409).json({ error: `Room ${body.houseNo} is already occupied.` });
       if (await tenants.findOne({ idNumber: idNumber, status: { $in: ['pending', 'accepted'] } })) return res.status(409).json({ error: 'An active application already exists for this ID number.' });
-      const tenant = { id: Date.now(), name: String(body.name).trim(), idNumber, phone: phone.startsWith('0') ? '+254' + phone.slice(1) : phone, houseNo: body.houseNo, dateEntered: body.dateEntered, monthlyRent: expected, expected, paid, balance: Math.max(0, expected - paid), status: 'pending', paymentHistory: paid > 0 ? [{ amount: paid, totalPaid: paid, date: new Date().toISOString(), source: 'Tenant registration' }] : [], timestamp: new Date().toLocaleString(), createdAt: new Date() };
+      const tenant = { id: Date.now(), name: String(body.name).trim(), idNumber, phone: phone.startsWith('0') ? '+254' + phone.slice(1) : phone, houseNo: body.houseNo, dateEntered: body.dateEntered, monthlyRent: expected, expected, paid, feesTotal: 0, balance: Math.max(0, expected - paid), status: 'pending', paymentHistory: paid > 0 ? [{ amount: paid, totalPaid: paid, date: new Date().toISOString(), source: 'Tenant registration' }] : [], feeHistory: [], timestamp: new Date().toLocaleString(), createdAt: new Date() };
       await tenants.insertOne(tenant);
       return res.status(201).json({ tenant: cleanTenant(tenant) });
     }
@@ -64,6 +64,12 @@ module.exports = async (req, res) => {
         }
         return res.status(200).json({ ok: true, month: rentMonth, generated, skipped, total, message: generated ? `Generated Ksh ${total.toLocaleString()} for ${generated} tenant${generated === 1 ? '' : 's'}.` : `Monthly rent for ${rentMonth} was already generated.` });
       }
+      if (action === 'add-fee') {
+        const amount = Number(req.body.feeAmount);
+        const category = String(req.body.feeCategory || '').trim();
+        if (!Number.isFinite(amount) || amount <= 0) return res.status(400).json({ error: 'Fee amount must be greater than zero.' });
+        if (!category || category.length > 60) return res.status(400).json({ error: 'Select a valid fee category.' });
+      }
       if (status !== undefined && !['accepted', 'declined'].includes(status)) return res.status(400).json({ error: 'Invalid tenant status.' });
       if (paid !== undefined && (!Number.isFinite(Number(paid)) || Number(paid) < 0)) return res.status(400).json({ error: 'Payment must be a non-negative number.' });
       if (paymentAmount !== undefined && (!Number.isFinite(Number(paymentAmount)) || Number(paymentAmount) <= 0)) return res.status(400).json({ error: 'Payment amount must be greater than zero.' });
@@ -73,6 +79,19 @@ module.exports = async (req, res) => {
         if (confirmation !== 'DELETE') return res.status(400).json({ error: 'Type DELETE to confirm payment-history deletion.' });
         await tenants.updateOne({ id: Number(id) }, { $set: { paid: 0, balance: Number(tenant.expected || 0), paymentHistory: [], stkPayments: [], updatedAt: new Date() } });
         return res.status(200).json({ ok: true, message: 'Payment history deleted and tenant balance reset.' });
+      }
+      if (action === 'add-fee') {
+        if (tenant.status !== 'accepted') return res.status(400).json({ error: 'Fees can only be added to an accepted tenant.' });
+        const amount = Number(req.body.feeAmount);
+        const category = String(req.body.feeCategory).trim();
+        const description = String(req.body.feeDescription || '').trim().slice(0, 200);
+        const nextExpected = Number(tenant.expected || 0) + amount;
+        await tenants.updateOne({ id: Number(id) }, {
+          $inc: { expected: amount, feesTotal: amount },
+          $set: { balance: Math.max(0, nextExpected - Number(tenant.paid || 0)), updatedAt: new Date() },
+          $push: { feeHistory: { category, amount, description, date: new Date().toISOString(), source: 'Management fee' } }
+        });
+        return res.status(200).json({ ok: true, message: `${category} fee of Ksh ${amount.toLocaleString()} added.` });
       }
       if (status === 'accepted' && await tenants.findOne({ houseNo: tenant.houseNo, status: 'accepted', id: { $ne: Number(id) } })) return res.status(409).json({ error: `Room ${tenant.houseNo} is already occupied.` });
       const update = { updatedAt: new Date() };

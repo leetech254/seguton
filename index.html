@@ -261,6 +261,16 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
       </form>
       <small class="field-help">Enter the new amount received. It will be added to the tenant’s existing total and shown in the tenant portal.</small>
     </div>
+    <div id="feePanel" class="panel" style="display:none">
+      <h2>Add tenant fee</h2>
+      <p id="feeTenantName" class="sub"></p>
+      <form id="feeForm">
+        <div class="row"><div><label>Fee type</label><select id="feeCategory" required><option value="">Select fee type</option><option>Water</option><option>Electricity</option><option>Service charge</option><option>Garbage collection</option><option>Other</option></select></div><div><label>Amount (Ksh)</label><input type="number" id="feeAmount" min="1" step="1" required placeholder="Amount due"></div></div>
+        <label>Description (optional)</label><input type="text" id="feeDescription" maxlength="200" placeholder="Example: October water bill">
+        <div style="display:flex;gap:8px"><button type="submit" class="submit">Add fee</button><button type="button" onclick="closeFeePanel()">Cancel</button></div>
+      </form>
+      <small class="field-help">The fee is added to the tenant’s expected total and balance, and appears in the Tenant Portal.</small>
+    </div>
     <div class="stats">
       <div class="stat"><h3 id="totalRooms">14</h3><p>Total Rooms</p></div>
       <div class="stat"><h3 id="availRooms">0</h3><p>Available</p></div>
@@ -289,7 +299,7 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
       <div style="overflow:auto;">
         <table>
           <thead>
-            <tr><th>Name</th><th>ID</th><th>Phone</th><th>Room</th><th>Date</th><th>Expected</th><th>Paid</th><th>Balance</th><th>Status</th><th>Action</th></tr>
+            <tr><th>Name</th><th>ID</th><th>Phone</th><th>Room</th><th>Date</th><th>Expected</th><th>Fees</th><th>Paid</th><th>Balance</th><th>Status</th><th>Action</th></tr>
           </thead>
           <tbody id="tenantTable"></tbody>
         </table>
@@ -358,12 +368,14 @@ function renderTenantPortal(data){
   const content=document.getElementById('tenantPortalContent');
   const latest=records[0];
   const history=records.flatMap(t=>(t.paymentHistory||[]).map(payment=>({...payment,houseNo:t.houseNo}))).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  const feeHistory=records.flatMap(t=>(t.feeHistory||[]).map(fee=>({...fee,houseNo:t.houseNo}))).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
   const paymentPhone=escapeHtml(document.getElementById('tenantLoginPhone')?.value || latest.phone || '');
   const paymentForms=records.filter(t=>Number(t.balance||0)>0).map(t=>`<div class="portal-actions"><span><strong>${escapeHtml(t.houseNo)}</strong> needs Ksh ${Number(t.balance).toLocaleString()}</span><div><input id="tenantPaymentPhone-${t.id}" type="tel" value="${paymentPhone}" placeholder="07xx or +254" aria-label="Phone number for STK prompt"><input id="tenantPay-${t.id}" type="number" min="1" max="${Number(t.balance)}" value="${Number(t.balance)}" style="width:130px" aria-label="Payment amount for ${escapeHtml(t.houseNo)}"><button class="submit" onclick="startTenantStkPayment(${Number(t.id)})">Send STK Prompt</button></div></div>`).join('');
   content.innerHTML=`<h1>Welcome, ${escapeHtml(latest.name)}</h1><p class="sub">Your payment information is updated from the estate database.</p>
     <div class="portal-summary"><div class="portal-stat"><strong>Ksh ${Number(records.reduce((sum,t)=>sum+Number(t.expected||0),0)).toLocaleString()}</strong><span>Total expected</span></div><div class="portal-stat"><strong>Ksh ${Number(records.reduce((sum,t)=>sum+Number(t.paid||0),0)).toLocaleString()}</strong><span>Total paid</span></div><div class="portal-stat"><strong>Ksh ${Number(records.reduce((sum,t)=>sum+Math.max(0,Number(t.balance||0)),0)).toLocaleString()}</strong><span>Current balance</span></div></div>
     ${paymentForms?`<h2>Pay outstanding balance</h2>${paymentForms}`:'<p class="sub">Your current balance is fully paid.</p>'}
-    <h2>My applications</h2><div style="overflow:auto"><table class="payment-history"><thead><tr><th>Room</th><th>Status</th><th>Expected</th><th>Paid</th><th>Balance</th></tr></thead><tbody>${records.map(t=>`<tr><td>${escapeHtml(t.houseNo)}</td><td>${escapeHtml(t.status)}</td><td>Ksh ${Number(t.expected||0).toLocaleString()}</td><td>Ksh ${Number(t.paid||0).toLocaleString()}</td><td>Ksh ${Number(t.balance||0).toLocaleString()}</td></tr>`).join('')}</tbody></table></div>
+    <h2>My applications</h2><div style="overflow:auto"><table class="payment-history"><thead><tr><th>Room</th><th>Status</th><th>Expected</th><th>Fees</th><th>Paid</th><th>Balance</th></tr></thead><tbody>${records.map(t=>`<tr><td>${escapeHtml(t.houseNo)}</td><td>${escapeHtml(t.status)}</td><td>Ksh ${Number(t.expected||0).toLocaleString()}</td><td>Ksh ${Number(t.feesTotal||0).toLocaleString()}</td><td>Ksh ${Number(t.paid||0).toLocaleString()}</td><td>Ksh ${Number(t.balance||0).toLocaleString()}</td></tr>`).join('')}</tbody></table></div>
+    <h2>Additional charges</h2>${feeHistory.length?`<div style="overflow:auto"><table class="payment-history"><thead><tr><th>Date</th><th>Room</th><th>Type</th><th>Description</th><th>Amount</th></tr></thead><tbody>${feeHistory.map(fee=>`<tr><td>${escapeHtml(new Date(fee.date).toLocaleString())}</td><td>${escapeHtml(fee.houseNo)}</td><td>${escapeHtml(fee.category)}</td><td>${escapeHtml(fee.description||'-')}</td><td>Ksh ${Number(fee.amount||0).toLocaleString()}</td></tr>`).join('')}</tbody></table></div>`:'<p class="sub">No additional charges have been added.</p>'}
     <h2>Payment history</h2>${history.length?`<div style="overflow:auto"><table class="payment-history"><thead><tr><th>Date</th><th>Room</th><th>Amount</th><th>Source</th></tr></thead><tbody>${history.map(payment=>`<tr><td>${escapeHtml(new Date(payment.date).toLocaleString())}</td><td>${escapeHtml(payment.houseNo)}</td><td>Ksh ${Number(payment.amount||0).toLocaleString()}</td><td>${escapeHtml(payment.source||'Payment')}</td></tr>`).join('')}</tbody></table></div>`:'<p class="sub">No payments have been recorded yet.</p>'}
     <div class="portal-actions"><span class="welcome-note">Refresh after an STK payment is confirmed.</span><button onclick="refreshTenantPortal()">Refresh balance</button><button class="submit" onclick="logoutTenantPortal()">Log out</button></div>`;
   document.getElementById('tenantPortalLogin').style.display='none'; content.style.display='block';
@@ -665,10 +677,10 @@ function renderManagement(){
   });
   tbody.innerHTML = visibleTenants.length ? visibleTenants.map(t=>`<tr>
     <td>${escapeHtml(t.name)}</td><td>${escapeHtml(t.idNumber)}</td><td>${escapeHtml(t.phone || '-')}</td><td>${escapeHtml(t.houseNo)}</td><td>${escapeHtml(t.dateEntered)}</td>
-    <td>${Number(t.expected||0).toLocaleString()}</td><td>${Number(t.paid||0).toLocaleString()}</td><td style="color:${t.balance>0?'red':'green'}">${Number(t.balance||0).toLocaleString()}</td>
+    <td>${Number(t.expected||0).toLocaleString()}</td><td>${Number(t.feesTotal||0).toLocaleString()}</td><td>${Number(t.paid||0).toLocaleString()}</td><td style="color:${t.balance>0?'red':'green'}">${Number(t.balance||0).toLocaleString()}</td>
     <td><span class="badge ${t.status}">${t.status}</span></td>
-    <td>${t.status==='pending'?`<button class="btn-small btn-accept" onclick="approveTenant(${t.id})">Accept</button><button class="btn-small btn-decline" onclick="declineTenant(${t.id})">Decline</button>`:t.status==='accepted'?`<button class="btn-small btn-payment" onclick="recordPayment(${t.id})">Record payment</button>`:'-'}${Number(t.paid||0)>0 || (t.paymentHistory||[]).length?`<button class="btn-small btn-decline" onclick="deletePaymentHistory(${t.id})">Delete payment history</button>`:''}</td>
-  </tr>`).join('') : '<tr><td colspan="10" class="empty-state">No database records match your filters.</td></tr>';
+    <td>${t.status==='pending'?`<button class="btn-small btn-accept" onclick="approveTenant(${t.id})">Accept</button><button class="btn-small btn-decline" onclick="declineTenant(${t.id})">Decline</button>`:t.status==='accepted'?`<button class="btn-small btn-payment" onclick="recordPayment(${t.id})">Record payment</button><button class="btn-small" onclick="openFeePanel(${t.id})">Add fee</button>`:'-'}${Number(t.paid||0)>0 || (t.paymentHistory||[]).length?`<button class="btn-small btn-decline" onclick="deletePaymentHistory(${t.id})">Delete payment history</button>`:''}</td>
+  </tr>`).join('') : '<tr><td colspan="11" class="empty-state">No database records match your filters.</td></tr>';
 }
 
 async function generateMonthlyRent(){
@@ -713,6 +725,28 @@ async function declineTenant(id){
   renderManagement();
 }
 
+let feeTenantId = null;
+function openFeePanel(id){
+  const tenant=tenants.find(t=>t.id===id); if(!tenant) return;
+  feeTenantId=id;
+  document.getElementById('feeTenantName').innerText=`${tenant.name} • ${tenant.houseNo} • Current balance: Ksh ${Number(tenant.balance||0).toLocaleString()}`;
+  document.getElementById('feePanel').style.display='block';
+  document.getElementById('feePanel').scrollIntoView({behavior:'smooth',block:'center'});
+  document.getElementById('feeCategory').focus();
+}
+function closeFeePanel(){ feeTenantId=null; document.getElementById('feePanel').style.display='none'; document.getElementById('feeForm').reset(); }
+document.getElementById('feeForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  if(!feeTenantId) return;
+  const category=document.getElementById('feeCategory').value;
+  const amount=Number(document.getElementById('feeAmount').value);
+  if(!category || !Number.isInteger(amount) || amount<=0){ showToast('Select a fee type and enter a valid amount.'); return; }
+  try{
+    const result=await apiRequest('PATCH',{id:feeTenantId,action:'add-fee',feeCategory:category,feeAmount:amount,feeDescription:document.getElementById('feeDescription').value});
+    closeFeePanel(); showToast(result.message||'Fee added and tenant balance updated.','success'); await syncFromDatabase();
+  }catch(error){ showToast(error.message); }
+});
+
 async function deletePaymentHistory(id){
   const tenant=tenants.find(t=>t.id===id);
   if(!tenant) return;
@@ -730,7 +764,7 @@ function generateReport(){
   if(tenants.length===0){ showToast('No tenant data to export.'); return; }
   const ws = XLSX.utils.json_to_sheet(tenants.map(t=>({
     "Name":t.name, "ID":t.idNumber, "Phone":t.phone || "", "Room":t.houseNo, "Date Entered":t.dateEntered,
-    "Expected":t.expected, "Paid":t.paid, "Balance":t.balance, "Status":t.status, "Time":t.timestamp
+    "Expected":t.expected, "Fees":t.feesTotal || 0, "Paid":t.paid, "Balance":t.balance, "Fee history":(t.feeHistory || []).map(f=>`${f.category}: Ksh ${f.amount}${f.description ? ` (${f.description})` : ""}`).join("; "), "Status":t.status, "Time":t.timestamp
   })));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Tenants Report");
