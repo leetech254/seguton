@@ -21,6 +21,7 @@ A browser-based rental and tenant management system.
 - Tenant registration collects normalized Kenyan phone numbers, validates the 8-digit Kenyan National ID format, auto-fills the rent due, and only shows available rooms
 - Tenant Portal login using name, National ID, and phone number shows applications, payment history, total paid, and live balance
 - Management payment entry accepts the amount received, adds it to the tenant total, and makes the new payment visible in the Tenant Portal
+- Admin payment-history deletion requires confirmation and resets the tenant paid total to Ksh 0 with the full balance restored
 - Tenant Portal STK Push payments through CourtneyTech with server-side credentials and confirmed-payment callbacks; successful registration opens this payment flow instead of the admin dashboard
 - Admin dashboard live polling with toast and banner notifications for confirmed M-Pesa payments, including amount, room, and receipt
 
@@ -50,6 +51,7 @@ The app requires the API and database environment variables. If the database is 
 - `POST /api/data` — creates a pending tenant application
 - `PATCH /api/data` with `{ "id": 123, "status": "accepted" | "declined" }` — updates an application
 - `PATCH /api/data` with `{ "id": 123, "paid": 5000 }` — records a tenant payment and recalculates the balance
+- `PATCH /api/data` with `{ "id": 123, "action": "delete-payment-history", "confirmation": "DELETE" }` — admin-only destructive reset of payment history and paid total
 - `/api/auth` — one-time administrator setup, login, logout, session status, and password changes
 - `POST /api/tenant` — verifies tenant name, 8-digit ID, and phone and returns applications/payment history
 - `POST /api/stkpush` — sends an STK prompt for an outstanding tenant balance; payment is not credited until the provider callback confirms success

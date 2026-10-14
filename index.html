@@ -665,7 +665,7 @@ function renderManagement(){
     <td>${escapeHtml(t.name)}</td><td>${escapeHtml(t.idNumber)}</td><td>${escapeHtml(t.phone || '-')}</td><td>${escapeHtml(t.houseNo)}</td><td>${escapeHtml(t.dateEntered)}</td>
     <td>${Number(t.expected||0).toLocaleString()}</td><td>${Number(t.paid||0).toLocaleString()}</td><td style="color:${t.balance>0?'red':'green'}">${Number(t.balance||0).toLocaleString()}</td>
     <td><span class="badge ${t.status}">${t.status}</span></td>
-    <td>${t.status==='pending'?`<button class="btn-small btn-accept" onclick="approveTenant(${t.id})">Accept</button><button class="btn-small btn-decline" onclick="declineTenant(${t.id})">Decline</button>`:t.status==='accepted'?`<button class="btn-small btn-payment" onclick="recordPayment(${t.id})">Record payment</button>`:'-'}</td>
+    <td>${t.status==='pending'?`<button class="btn-small btn-accept" onclick="approveTenant(${t.id})">Accept</button><button class="btn-small btn-decline" onclick="declineTenant(${t.id})">Decline</button>`:t.status==='accepted'?`<button class="btn-small btn-payment" onclick="recordPayment(${t.id})">Record payment</button>`:'-'}${Number(t.paid||0)>0 || (t.paymentHistory||[]).length?`<button class="btn-small btn-decline" onclick="deletePaymentHistory(${t.id})">Delete payment history</button>`:''}</td>
   </tr>`).join('') : '<tr><td colspan="10" class="empty-state">No database records match your filters.</td></tr>';
 }
 
@@ -695,6 +695,19 @@ async function declineTenant(id){
     showToast(error.message);
   }
   renderManagement();
+}
+
+async function deletePaymentHistory(id){
+  const tenant=tenants.find(t=>t.id===id);
+  if(!tenant) return;
+  if(!confirm(`Delete all payment history for ${tenant.name}? This will reset paid to Ksh 0 and restore the full balance of Ksh ${Number(tenant.expected||0).toLocaleString()}.`)) return;
+  const confirmation=prompt('This action cannot be undone. Type DELETE to continue:');
+  if(confirmation!=='DELETE'){ showToast('Payment history was not deleted. Type DELETE exactly to confirm.'); return; }
+  try{
+    await apiRequest('PATCH',{id,action:'delete-payment-history',confirmation:'DELETE'});
+    showToast('Payment history deleted and balance reset.','success');
+    await syncFromDatabase();
+  }catch(error){ showToast(error.message); }
 }
 
 function generateReport(){

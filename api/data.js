@@ -42,13 +42,18 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'PATCH') {
-      const { id, status, paid, paymentAmount } = req.body || {};
-      if (!id || (status === undefined && paid === undefined && paymentAmount === undefined)) return res.status(400).json({ error: 'A tenant ID and status or payment are required.' });
+      const { id, status, paid, paymentAmount, action, confirmation } = req.body || {};
+      if (!id || (status === undefined && paid === undefined && paymentAmount === undefined && action !== 'delete-payment-history')) return res.status(400).json({ error: 'A tenant ID and status or payment are required.' });
       if (status !== undefined && !['accepted', 'declined'].includes(status)) return res.status(400).json({ error: 'Invalid tenant status.' });
       if (paid !== undefined && (!Number.isFinite(Number(paid)) || Number(paid) < 0)) return res.status(400).json({ error: 'Payment must be a non-negative number.' });
       if (paymentAmount !== undefined && (!Number.isFinite(Number(paymentAmount)) || Number(paymentAmount) <= 0)) return res.status(400).json({ error: 'Payment amount must be greater than zero.' });
       const tenant = await tenants.findOne({ id: Number(id) });
       if (!tenant) return res.status(404).json({ error: 'Tenant not found.' });
+      if (action === 'delete-payment-history') {
+        if (confirmation !== 'DELETE') return res.status(400).json({ error: 'Type DELETE to confirm payment-history deletion.' });
+        await tenants.updateOne({ id: Number(id) }, { $set: { paid: 0, balance: Number(tenant.expected || 0), paymentHistory: [], stkPayments: [], updatedAt: new Date() } });
+        return res.status(200).json({ ok: true, message: 'Payment history deleted and tenant balance reset.' });
+      }
       if (status === 'accepted' && await tenants.findOne({ houseNo: tenant.houseNo, status: 'accepted', id: { $ne: Number(id) } })) return res.status(409).json({ error: `Room ${tenant.houseNo} is already occupied.` });
       const update = { updatedAt: new Date() };
       if (status !== undefined) update.status = status;
