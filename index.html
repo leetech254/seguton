@@ -148,6 +148,9 @@ th{background:#2c3e50; color:white; position:sticky; top:0;}
       <label>Phone Number</label>
       <input type="tel" id="phone" required inputmode="tel" autocomplete="tel" placeholder="+254 712 345 678 or 0712 345 678" pattern="(?:\+254|0)[17][0-9\s-]{8,}" title="Use +254 7xx xxx xxx, +254 1xx xxx xxx, 07xx xxx xxx or 01xx xxx xxx">
 
+      <label>Email Address <span style="font-weight:400;color:#667085">(optional)</span></label>
+      <input type="email" id="email" autocomplete="email" placeholder="tenant@example.com">
+
       <div class="row">
         <div>
           <label>Room Type</label>
@@ -602,6 +605,7 @@ document.getElementById('tenantForm').addEventListener('submit', async (e)=>{
   const tenant = {
     name: document.getElementById('name').value,
     idNumber: document.getElementById('idNumber').value,
+    email: document.getElementById('email').value.trim(),
     phone,
     houseNo: houseNo,
     dateEntered: document.getElementById('dateEntered').value,

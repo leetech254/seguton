@@ -1,5 +1,6 @@
 const { ROOM_DEFINITIONS, getDatabase, initializeDatabase, readSnapshot, cleanTenant } = require('../lib/database');
 const { requireAdmin } = require('../lib/auth');
+const { notifyTenant } = require('../lib/notifications');
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
@@ -32,11 +33,13 @@ module.exports = async (req, res) => {
       const idNumber = String(body.idNumber).trim();
       if (!/^\d{8}$/.test(idNumber)) return res.status(400).json({ error: 'Kenyan National ID number must contain exactly 8 digits.' });
       const phone = String(body.phone).replace(/[\s-]/g, '');
+      const email = String(body.email || '').trim().toLowerCase();
       if (!/^(?:\+254|0)[17]\d{8}$/.test(phone)) return res.status(400).json({ error: 'Enter a valid Kenyan phone number using +254 7xx/1xx or 07xx/01xx.' });
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Enter a valid email address.' });
       if (!Number.isFinite(expected) || !Number.isFinite(paid) || paid < 0) return res.status(400).json({ error: 'Expected rent and payment must be valid numbers.' });
       if (await tenants.findOne({ houseNo: body.houseNo, status: 'accepted' })) return res.status(409).json({ error: `Room ${body.houseNo} is already occupied.` });
       if (await tenants.findOne({ idNumber: idNumber, status: { $in: ['pending', 'accepted'] } })) return res.status(409).json({ error: 'An active application already exists for this ID number.' });
-      const tenant = { id: Date.now(), name: String(body.name).trim(), idNumber, phone: phone.startsWith('0') ? '+254' + phone.slice(1) : phone, houseNo: body.houseNo, dateEntered: body.dateEntered, monthlyRent: expected, expected, paid, feesTotal: 0, balance: Math.max(0, expected - paid), status: 'pending', paymentHistory: paid > 0 ? [{ amount: paid, totalPaid: paid, date: new Date().toISOString(), source: 'Tenant registration' }] : [], feeHistory: [], timestamp: new Date().toLocaleString(), createdAt: new Date() };
+      const tenant = { id: Date.now(), name: String(body.name).trim(), idNumber, email, phone: phone.startsWith('0') ? '+254' + phone.slice(1) : phone, houseNo: body.houseNo, dateEntered: body.dateEntered, monthlyRent: expected, expected, paid, feesTotal: 0, balance: Math.max(0, expected - paid), status: 'pending', paymentHistory: paid > 0 ? [{ amount: paid, totalPaid: paid, date: new Date().toISOString(), source: 'Tenant registration' }] : [], feeHistory: [], timestamp: new Date().toLocaleString(), createdAt: new Date() };
       await tenants.insertOne(tenant);
       return res.status(201).json({ tenant: cleanTenant(tenant) });
     }
@@ -48,7 +51,7 @@ module.exports = async (req, res) => {
         const rentMonth = String(month || new Date().toISOString().slice(0, 7));
         if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(rentMonth)) return res.status(400).json({ error: 'Month must use YYYY-MM format.' });
         const accepted = await tenants.find({ status: 'accepted' }).toArray();
-        let generated = 0; let skipped = 0; let total = 0;
+        let generated = 0; let skipped = 0; let total = 0; const notificationJobs = [];
         for (const record of accepted) {
           const monthlyRent = Number(record.monthlyRent || record.expected || 0);
           if (!Number.isFinite(monthlyRent) || monthlyRent <= 0) { skipped += 1; continue; }
@@ -60,9 +63,14 @@ module.exports = async (req, res) => {
               $push: { rentCharges: { month: rentMonth, amount: monthlyRent, generatedAt: new Date().toISOString(), source: 'Monthly rent generation' } }
             }
           );
-          if (result.modifiedCount) { generated += 1; total += monthlyRent; } else skipped += 1;
+          if (result.modifiedCount) {
+            generated += 1; total += monthlyRent;
+            notificationJobs.push(notifyTenant({ ...record, expected: Number(record.expected || 0) + monthlyRent, balance: Math.max(0, Number(record.expected || 0) + monthlyRent - Number(record.paid || 0)) }, { title: `Monthly rent generated for ${rentMonth}`, amount: monthlyRent, balance: Math.max(0, Number(record.expected || 0) + monthlyRent - Number(record.paid || 0)), detail: 'Monthly rent' }));
+          } else skipped += 1;
         }
-        return res.status(200).json({ ok: true, month: rentMonth, generated, skipped, total, message: generated ? `Generated Ksh ${total.toLocaleString()} for ${generated} tenant${generated === 1 ? '' : 's'}.` : `Monthly rent for ${rentMonth} was already generated.` });
+        const notificationResults = await Promise.allSettled(notificationJobs);
+        notificationResults.filter(result => result.status === 'rejected').forEach(result => console.error('SEGUTON notification error:', result.reason?.message || result.reason));
+        return res.status(200).json({ ok: true, month: rentMonth, generated, skipped, total, notificationsAttempted: notificationJobs.length, message: generated ? `Generated Ksh ${total.toLocaleString()} for ${generated} tenant${generated === 1 ? '' : 's'}.` : `Monthly rent for ${rentMonth} was already generated.` });
       }
       if (action === 'add-fee') {
         const amount = Number(req.body.feeAmount);
@@ -91,6 +99,9 @@ module.exports = async (req, res) => {
           $set: { balance: Math.max(0, nextExpected - Number(tenant.paid || 0)), updatedAt: new Date() },
           $push: { feeHistory: { category, amount, description, date: new Date().toISOString(), source: 'Management fee' } }
         });
+        try {
+          await notifyTenant({ ...tenant, expected: nextExpected, balance: Math.max(0, nextExpected - Number(tenant.paid || 0)) }, { title: `${category} fee added`, amount, balance: Math.max(0, nextExpected - Number(tenant.paid || 0)), detail: description || category });
+        } catch (error) { console.error('SEGUTON notification error:', error.message); }
         return res.status(200).json({ ok: true, message: `${category} fee of Ksh ${amount.toLocaleString()} added.` });
       }
       if (status === 'accepted' && await tenants.findOne({ houseNo: tenant.houseNo, status: 'accepted', id: { $ne: Number(id) } })) return res.status(409).json({ error: `Room ${tenant.houseNo} is already occupied.` });
