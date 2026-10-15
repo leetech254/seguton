@@ -68,7 +68,7 @@ module.exports = async (req, res) => {
       if (!validEmail(email) || !phone || !validPassword(body.password)) return res.status(400).json({ error: 'Enter a valid email, Kenyan phone number, and password with at least 8 characters.' });
       const verification = createToken();
       const admin = { email, phone, passwordHash: await hashPassword(body.password), emailVerified: false, emailVerificationTokenHash: verification.hash, emailVerificationExpiresAt: verification.expiresAt, createdAt: new Date(), updatedAt: new Date() };
-      try { await sendAdminVerification(req, admin, verification.token); } catch (error) { return res.status(502).json({ error: 'Verification email could not be sent. Check your Resend sender configuration and try again.' }); }
+      try { await sendAdminVerification(req, admin, verification.token); } catch (error) { return res.status(502).json({ error: 'Verification email could not be sent. Check your email sender configuration and try again.' }); }
       await admins.insertOne(admin);
       return res.status(201).json({ verificationRequired: true, email, message: 'Administrator created. Check your email and open the verification link before signing in.' });
     }

@@ -125,7 +125,7 @@ body.admin-mode .nav{display:none}body.admin-mode #managePage{padding-top:24px}.
 @media(max-width:850px){.tenant-portal-card{max-width:100%;padding:0}.tenant-dashboard-shell{display:block;min-height:620px}.tenant-dashboard-main{padding:68px 16px 18px}.tenant-menu-toggle{display:flex;position:absolute;top:14px;left:14px;z-index:4;align-items:center;gap:8px;border:0;border-radius:9px;background:#13283b;color:#fff;padding:10px 13px;font-weight:800;cursor:pointer;box-shadow:0 5px 14px rgba(0,0,0,.18)}.tenant-portal-sidebar{position:fixed;top:0;bottom:0;left:0;width:min(310px,86vw);transform:translateX(-105%);transition:transform .2s ease;z-index:600;border-radius:0 18px 18px 0}.tenant-portal-sidebar.open{transform:translateX(0)}.tenant-sidebar-close{display:block;margin-left:auto;border:0;background:transparent;color:#fff;font-size:27px;line-height:1;cursor:pointer}.tenant-portal-backdrop{display:block;position:fixed;inset:0;background:rgba(8,20,32,.58);opacity:0;pointer-events:none;transition:opacity .2s ease;z-index:550}.tenant-drawer-open .tenant-portal-backdrop{opacity:1;pointer-events:auto}.tenant-dashboard-topbar{display:block;margin-bottom:18px}.tenant-topbar-actions{margin-top:12px;justify-content:space-between}.tenant-dashboard-main .portal-footer span{flex-basis:100%;margin:0 0 5px}.tenant-dashboard-main .portal-footer button{flex:1}.tenant-dashboard-main .tenant-room-card{align-items:flex-start;flex-direction:column}.tenant-dashboard-main .tenant-room-meta{width:100%}}
 @media(max-width:520px){.tenant-dashboard-main{padding:66px 12px 14px}.tenant-dashboard-topbar h1{font-size:23px}.tenant-topbar-actions{width:100%}.tenant-topbar-actions button{flex:1}.tenant-dashboard-main .portal-summary{grid-template-columns:1fr 1fr}.tenant-dashboard-main .portal-stat{padding:12px}.tenant-dashboard-main .portal-stat strong{font-size:18px}.tenant-dashboard-main .portal-footer button{font-size:12px;padding:9px 7px}}
 
-body.tenant-portal-mode .nav{display:none}body.tenant-portal-mode{background:#eef3f8}body.tenant-portal-mode .page{padding-top:28px}body.tenant-portal-mode #tenantPortalPage{background:linear-gradient(135deg,#102235,#1f4b63);padding:28px 20px;align-items:center}body.tenant-portal-mode #tenantPortalPage:before{content:'🏠  SEGUTON TENANT PORTAL';position:fixed;top:24px;left:28px;color:#f1c40f;font-weight:800;letter-spacing:1px;font-size:14px;z-index:1}body.tenant-portal-mode #tenantPortalPage .tenant-portal-card{box-shadow:0 24px 70px rgba(0,0,0,.3)}@media(max-width:520px){body.tenant-portal-mode #tenantPortalPage{padding:16px 10px}body.tenant-portal-mode #tenantPortalPage:before{top:12px;left:16px;font-size:11px}.tenant-portal-card #tenantPortalLogin{padding:24px 18px}}
+body.tenant-portal-mode .nav{display:none}body.tenant-portal-mode{background:#eef3f8}body.tenant-portal-mode .page{padding-top:28px}body.tenant-portal-mode #tenantPortalPage{background:linear-gradient(135deg,#102235,#1f4b63);padding:28px 20px;align-items:center}body.tenant-portal-mode #tenantPortalPage:before{content:'🏠  SEGUTON TENANT LOGIN';position:fixed;top:24px;left:28px;color:#f1c40f;font-weight:800;letter-spacing:1px;font-size:14px;z-index:1}body.tenant-portal-mode #tenantPortalPage .tenant-portal-card{box-shadow:0 24px 70px rgba(0,0,0,.3)}@media(max-width:520px){body.tenant-portal-mode #tenantPortalPage{padding:16px 10px}body.tenant-portal-mode #tenantPortalPage:before{top:12px;left:16px;font-size:11px}.tenant-portal-card #tenantPortalLogin{padding:24px 18px}}
 </style>
 </head>
 <body>
@@ -135,7 +135,7 @@ body.tenant-portal-mode .nav{display:none}body.tenant-portal-mode{background:#ee
   <h2>🏠 SEGUTON</h2>
   <div class="nav-links">
     <button id="btnTenant" class="active" onclick="showPage('tenantPage')">Tenants Entry</button>
-    <button id="btnTenantPortal" onclick="openTenantPortal()">Pay rent with M-Pesa</button>
+    <button id="btnTenantPortal" onclick="openTenantPortal()">Tenant Login · Pay rent with M-Pesa</button>
     <button id="btnManage" onclick="openManagement()">Management</button>
   </div>
 </div>
@@ -149,7 +149,7 @@ body.tenant-portal-mode .nav{display:none}body.tenant-portal-mode{background:#ee
       <p>Submit your tenant details, choose an available room, and keep your rent information organized in one secure place.</p>
       <div class="hero-actions">
         <button class="hero-primary" onclick="document.getElementById('registrationCard').scrollIntoView({behavior:'smooth',block:'center'})">Start registration</button>
-        <button class="hero-payment" onclick="openTenantPortal()">Pay rent with M-Pesa</button>
+        <button class="hero-payment" onclick="openTenantPortal()">Tenant Login · Pay rent with M-Pesa</button>
         <button class="hero-secondary" onclick="openManagement()">Management login</button>
       </div>
       <div class="hero-points">
@@ -175,7 +175,7 @@ body.tenant-portal-mode .nav{display:none}body.tenant-portal-mode{background:#ee
 
       <label>Email for payment and account updates <span style="font-weight:400;color:#667085">(optional)</span></label>
       <input type="email" id="email" autocomplete="email" placeholder="tenant@example.com">
-      <small class="field-help">Resend email updates are sent here when payments, fees, or application status change.</small>
+      <small class="field-help">Email updates are sent here when payments, fees, or application status change.</small>
 
       <div class="row">
         <div>
@@ -198,7 +198,7 @@ body.tenant-portal-mode .nav{display:none}body.tenant-portal-mode{background:#ee
       <button type="submit" class="submit">Submit & continue to payment</button>
       <div class="status-msg" id="tenantStatus"></div>
     </form>
-      <p class="welcome-note">After submission, you will enter the tenant portal to choose the phone number and amount for your M-Pesa prompt.</p>
+      <p class="welcome-note">After submission, you will open Tenant Login · Pay rent with M-Pesa to complete your payment.</p>
     </div>
   </div>
 </div>
@@ -209,15 +209,15 @@ body.tenant-portal-mode .nav{display:none}body.tenant-portal-mode{background:#ee
 <div id="tenantPortalPage" class="page">
   <div class="card auth-card tenant-portal-card">
     <div id="tenantPortalLogin">
-      <div class="portal-login-heading"><span class="portal-kicker">TENANT PORTAL</span><h1>Manage your rent</h1><p class="sub">Sign in to see your room, balance, payment history, and send an M-Pesa prompt.</p></div>
+      <div class="portal-login-heading"><span class="portal-kicker">TENANT LOGIN · PAY RENT WITH M-PESA</span><h1>Tenant Login · Pay rent with M-Pesa</h1><p class="sub">Sign in with your registered details to view your room, balance, payment history, and make a payment.</p></div>
       <form id="tenantPortalForm">
         <label>Full Name</label><input type="text" id="tenantLoginName" required autocomplete="name" placeholder="John Kiprop">
         <label>Kenyan National ID Number</label><input type="text" id="tenantLoginId" required inputmode="numeric" minlength="8" maxlength="8" pattern="[0-9]{8}" placeholder="12345678">
-        <label>Phone Number for payment prompt</label><input type="tel" id="tenantLoginPhone" required inputmode="tel" autocomplete="tel" placeholder="+254 712 345 678 or 0712 345 678">
-        <button id="tenantPortalSubmit" type="submit" class="submit">Open my rent dashboard</button>
+        <label>Phone Number for M-Pesa payment</label><input type="tel" id="tenantLoginPhone" required inputmode="tel" autocomplete="tel" placeholder="+254 712 345 678 or 0712 345 678">
+        <button id="tenantPortalSubmit" type="submit" class="submit">Sign in to pay with M-Pesa</button>
       </form>
-      <div class="portal-steps"><div><b>1</b><span>Verify details</span></div><div><b>2</b><span>See balance</span></div><div><b>3</b><span>Prompt M-Pesa</span></div></div>
-      <p class="field-help" style="text-align:center;margin:14px 0 0">Use the phone number that should receive the M-Pesa prompt. Your payment history and balance are loaded from the database.</p>
+      <div class="portal-steps"><div><b>1</b><span>Sign in</span></div><div><b>2</b><span>View balance</span></div><div><b>3</b><span>Pay with M-Pesa</span></div></div>
+      <p class="field-help" style="text-align:center;margin:14px 0 0">Use your registered phone number. Your room, balance, and payment history are loaded from the Database.</p>
       <div id="tenantPortalStatus" class="status-msg"></div>
     </div>
     <div id="tenantPortalContent" style="display:none"></div>
@@ -246,9 +246,9 @@ body.tenant-portal-mode .nav{display:none}body.tenant-portal-mode{background:#ee
         <label>Password</label><input type="password" id="loginPassword" required autocomplete="current-password" placeholder="Your password">
         <button id="loginSubmit" type="submit" class="submit">Sign in</button>
       </form>
-      <div class="auth-links"><button type="button" class="muted-link" onclick="showForgotPassword()">Forgot password?</button><button type="button" class="muted-link" onclick="showResendVerification()">Resend verification email</button></div>
-      <div id="forgotPasswordView" class="auth-recovery" style="display:none"><h3>Reset administrator password</h3><p class="field-help">Enter your administrator email. If it exists, Resend will send a one-time reset link.</p><form id="forgotPasswordForm"><label>Email</label><input type="email" id="forgotEmail" required autocomplete="email"><button type="submit" class="submit">Send reset link</button></form><button type="button" class="muted-link" onclick="hideRecoveryViews()">Back to login</button></div>
-      <div id="resendVerificationView" class="auth-recovery" style="display:none"><h3>Resend verification</h3><p class="field-help">Send a fresh verification link to your administrator email.</p><form id="resendVerificationForm"><label>Email</label><input type="email" id="resendEmail" required autocomplete="email"><button type="submit" class="submit">Send verification link</button></form><button type="button" class="muted-link" onclick="hideRecoveryViews()">Back to login</button></div>
+      <div class="auth-links"><button type="button" class="muted-link" onclick="showForgotPassword()">Forgot password?</button><button type="button" class="muted-link" onclick="showResendVerification()">Email update</button></div>
+      <div id="forgotPasswordView" class="auth-recovery" style="display:none"><h3>Reset administrator password</h3><p class="field-help">Enter your administrator email. If your account exists, an email with a one-time reset link will be sent.</p><form id="forgotPasswordForm"><label>Email</label><input type="email" id="forgotEmail" required autocomplete="email"><button type="submit" class="submit">Send reset link</button></form><button type="button" class="muted-link" onclick="hideRecoveryViews()">Back to login</button></div>
+      <div id="resendVerificationView" class="auth-recovery" style="display:none"><h3>Email update</h3><p class="field-help">Send a new administrator email verification link.</p><form id="resendVerificationForm"><label>Email</label><input type="email" id="resendEmail" required autocomplete="email"><button type="submit" class="submit">Send email update</button></form><button type="button" class="muted-link" onclick="hideRecoveryViews()">Back to login</button></div>
       <div id="resetPasswordView" class="auth-recovery" style="display:none"><h3>Choose a new password</h3><form id="resetPasswordForm"><label>New password</label><input type="password" id="resetPassword" required minlength="8" autocomplete="new-password"><label>Confirm new password</label><input type="password" id="resetPasswordConfirm" required minlength="8" autocomplete="new-password"><button type="submit" class="submit">Reset password</button></form></div>
       <button class="muted-link" onclick="showPage('tenantPage')">Back to tenant registration</button>
     </div>
@@ -315,7 +315,7 @@ body.tenant-portal-mode .nav{display:none}body.tenant-portal-mode{background:#ee
         <div><label>Amount received (Ksh)</label><input type="number" id="paymentAmount" min="1" step="1" required placeholder="Amount needed"></div>
         <div style="display:flex;align-items:end;gap:8px"><button type="submit" class="submit">Save payment</button><button type="button" onclick="closePaymentPanel()">Cancel</button></div>
       </form>
-      <small class="field-help">Enter the new amount received. It will be added to the tenant’s existing total and shown in the tenant portal.</small>
+      <small class="field-help">Enter the amount received. It will be added to the tenant account and shown in payment history.</small>
     </div>
     <div id="feePanel" class="panel" data-admin-tab="billing" style="display:none">
       <h2>Add tenant fee</h2>
@@ -325,7 +325,7 @@ body.tenant-portal-mode .nav{display:none}body.tenant-portal-mode{background:#ee
         <label>Description (optional)</label><input type="text" id="feeDescription" maxlength="200" placeholder="Example: October water bill">
         <div style="display:flex;gap:8px"><button type="submit" class="submit">Add fee</button><button type="button" onclick="closeFeePanel()">Cancel</button></div>
       </form>
-      <small class="field-help">You will review the tenant, fee, amount, description, and new balance before saving. The fee then appears in the Tenant Portal and configured notifications.</small>
+      <small class="field-help">Review the tenant, fee, amount, description, and new balance before saving. The fee will appear in the tenant account and email updates.</small>
     </div>
     <div class="stats" data-admin-tab="overview">
       <div class="stat"><h3 id="totalRooms">14</h3><p>Total Rooms</p></div>
@@ -353,7 +353,7 @@ body.tenant-portal-mode .nav{display:none}body.tenant-portal-mode{background:#ee
           <option value="all">All statuses</option><option value="pending">Pending</option><option value="accepted">Accepted</option><option value="declined">Declined</option>
         </select>
         <button onclick="syncFromDatabase()">↻ Refresh data</button>
-        <span id="syncStatus" class="sync-status">Database required</span>
+        <span id="syncStatus" class="sync-status">Waiting for Database</span>
       </div>
       <div style="overflow:auto;">
         <table>
@@ -422,7 +422,7 @@ function tenantPortalRequest(body){
   const method=body?.method || 'POST';
   const payload={...body}; delete payload.method;
   return fetch('/api/tenant',{method,credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
-    .then(async response=>{ const payload=await response.json().catch(()=>({error:'Tenant portal returned an invalid response.'})); if(!response.ok) throw new Error(payload.error||'Tenant portal request failed.'); return payload; });
+    .then(async response=>{ const payload=await response.json().catch(()=>({error:'Tenant login returned an invalid response.'})); if(!response.ok) throw new Error(payload.error||'Tenant account request failed.'); return payload; });
 }
 let tenantRestoreInProgress=false;
 async function restoreTenantSession(showError=false){
@@ -457,17 +457,17 @@ function renderTenantPortal(data){
   const totalPaid=records.reduce((sum,t)=>sum+Number(t.paid||0),0);
   const totalBalance=records.reduce((sum,t)=>sum+Math.max(0,Number(t.balance||0)),0);
   const paymentPhone=escapeHtml(document.getElementById('tenantLoginPhone')?.value || latest.phone || '');
-  const paymentForms=records.filter(t=>Number(t.balance||0)>0).map(t=>`<div class="tenant-payment-card"><div class="tenant-payment-title"><div><span class="portal-kicker">ROOM ${escapeHtml(t.houseNo)}</span><h3>Pay outstanding balance</h3></div><strong>Ksh ${Number(t.balance).toLocaleString()} due</strong></div><p class="field-help">Choose the phone that should receive the M-Pesa prompt and confirm the amount.</p><div class="payment-prompt-controls"><label>Phone for STK prompt</label><input id="tenantPaymentPhone-${t.id}" type="tel" value="${paymentPhone}" placeholder="07xx or +254" aria-label="Phone number for STK prompt"><label>Amount (Ksh)</label><input id="tenantPay-${t.id}" type="number" min="1" max="${Number(t.balance)}" value="${Number(t.balance)}" aria-label="Payment amount for ${escapeHtml(t.houseNo)}"><button class="submit" onclick="startTenantStkPayment(${Number(t.id)})">Send M-Pesa prompt</button></div></div>`).join('');
+  const paymentForms=records.filter(t=>Number(t.balance||0)>0).map(t=>`<div class="tenant-payment-card"><div class="tenant-payment-title"><div><span class="portal-kicker">ROOM ${escapeHtml(t.houseNo)}</span><h3>Pay outstanding balance</h3></div><strong>Ksh ${Number(t.balance).toLocaleString()} due</strong></div><p class="field-help">Choose the phone that should receive the M-Pesa prompt and confirm the amount.</p><div class="payment-prompt-controls"><label>Phone for M-Pesa prompt</label><input id="tenantPaymentPhone-${t.id}" type="tel" value="${paymentPhone}" placeholder="07xx or +254" aria-label="Phone number for M-Pesa prompt"><label>Amount (Ksh)</label><input id="tenantPay-${t.id}" type="number" min="1" max="${Number(t.balance)}" value="${Number(t.balance)}" aria-label="Payment amount for ${escapeHtml(t.houseNo)}"><button class="submit" onclick="startTenantStkPayment(${Number(t.id)})">Send M-Pesa prompt</button></div></div>`).join('');
   const applications=`<div class="table-scroll"><table class="payment-history"><thead><tr><th>Room</th><th>Status</th><th>Expected</th><th>Fees</th><th>Paid</th><th>Balance</th></tr></thead><tbody>${records.map(t=>`<tr><td>${escapeHtml(t.houseNo)}</td><td><span class="status-chip ${escapeHtml(t.status)}">${escapeHtml(t.status)}</span></td><td>Ksh ${Number(t.expected||0).toLocaleString()}</td><td>Ksh ${Number(t.feesTotal||0).toLocaleString()}</td><td>Ksh ${Number(t.paid||0).toLocaleString()}</td><td>Ksh ${Number(t.balance||0).toLocaleString()}</td></tr>`).join('')}</tbody></table></div>`;
   const charges=feeHistory.length?`<div class="table-scroll"><table class="payment-history"><thead><tr><th>Date</th><th>Room</th><th>Type</th><th>Description</th><th>Amount</th></tr></thead><tbody>${feeHistory.map(fee=>`<tr><td>${escapeHtml(new Date(fee.date).toLocaleDateString())}</td><td>${escapeHtml(fee.houseNo)}</td><td>${escapeHtml(fee.category)}</td><td>${escapeHtml(fee.description||'-')}</td><td>Ksh ${Number(fee.amount||0).toLocaleString()}</td></tr>`).join('')}</tbody></table></div>`:'<p class="empty-portal">No additional charges have been added.</p>';
   const payments=history.length?`<div class="table-scroll"><table class="payment-history"><thead><tr><th>Date</th><th>Room</th><th>Amount</th><th>Source</th><th>Receipt</th></tr></thead><tbody>${history.map(payment=>`<tr><td>${escapeHtml(new Date(payment.date).toLocaleDateString())}</td><td>${escapeHtml(payment.houseNo)}</td><td>Ksh ${Number(payment.amount||0).toLocaleString()}</td><td>${escapeHtml(payment.source||'Payment')}</td><td>${escapeHtml(payment.receipt||'-')}</td></tr>`).join('')}</tbody></table></div>`:'<p class="empty-portal">No payments have been recorded yet.</p>';
-  content.innerHTML=`<div class="tenant-dashboard-shell"><button class="tenant-menu-toggle" onclick="toggleTenantMenu()">☰ <span>Tenant menu</span></button><div id="tenantPortalBackdrop" class="tenant-portal-backdrop" onclick="toggleTenantMenu()" aria-hidden="true"></div><aside id="tenantPortalSidebar" class="tenant-portal-sidebar" aria-label="Tenant dashboard navigation"><div class="tenant-sidebar-brand"><span>🏠</span><div><strong>SEGUTON</strong><small>Tenant portal</small></div><button class="tenant-sidebar-close" onclick="toggleTenantMenu()" aria-label="Close tenant menu">×</button></div><div class="tenant-sidebar-welcome"><span class="portal-kicker">SIGNED IN AS</span><strong>${escapeHtml(latest.name)}</strong><small>${escapeHtml(latest.houseNo)} · ${escapeHtml(latest.phone||'')}</small></div><nav class="tenant-sidebar-nav"><span class="tenant-nav-label">ACCOUNT</span><button data-tenant-tab="summary" class="tenant-portal-tab active" onclick="showTenantPortalTab('summary')">▦ <span>Overview</span></button><button data-tenant-tab="pay" class="tenant-portal-tab" onclick="showTenantPortalTab('pay')">↗ <span>Pay rent</span>${totalBalance>0?`<b>Ksh ${totalBalance.toLocaleString()}</b>`:''}</button><span class="tenant-nav-label">RECORDS</span><button data-tenant-tab="charges" class="tenant-portal-tab" onclick="showTenantPortalTab('charges')">▤ <span>Charges</span></button><button data-tenant-tab="history" class="tenant-portal-tab" onclick="showTenantPortalTab('history')">◷ <span>Full history</span></button><span class="tenant-nav-label">ACCOUNT SETTINGS</span><button data-tenant-tab="contact" class="tenant-portal-tab" onclick="showTenantPortalTab('contact')">⚙ <span>Contact & updates</span></button></nav><div class="tenant-sidebar-spacer"></div><div class="tenant-sidebar-status"><i></i><span>Database records</span></div><button class="tenant-sidebar-logout" onclick="logoutTenantPortal()">↪ <span>Log out</span></button></aside><main class="tenant-dashboard-main"><div class="tenant-dashboard-topbar"><div><span class="portal-kicker">TENANT DASHBOARD</span><h1>Welcome back, ${escapeHtml(latest.name.split(' ')[0])}</h1><p>Manage your stay, payments, and account updates in one place.</p></div><div class="tenant-topbar-actions"><span class="tenant-status-pill ${escapeHtml(latest.status)}">${escapeHtml(latest.status)}</span><button onclick="refreshTenantPortal()">↻ Refresh</button></div></div>
-    <section id="tenantTab-summary" class="tenant-tab-panel"><div class="tenant-room-card"><div><span class="portal-kicker">YOUR ROOM</span><h2>${escapeHtml(latest.houseNo)}</h2><p>Application status: <strong>${escapeHtml(latest.status)}</strong></p></div><div class="tenant-room-meta"><span>Phone</span><strong>${escapeHtml(latest.phone||'-')}</strong><span>Email</span><strong>${escapeHtml(latest.email||'Not added')}</strong></div></div><div class="portal-summary"><div class="portal-stat"><span>Total expected</span><strong>Ksh ${totalExpected.toLocaleString()}</strong></div><div class="portal-stat"><span>Total paid</span><strong>Ksh ${totalPaid.toLocaleString()}</strong></div><div class="portal-stat highlight"><span>Current balance</span><strong>Ksh ${totalBalance.toLocaleString()}</strong></div></div><div class="summary-next-step">${totalBalance>0?'Your next step is to open Pay rent and send an M-Pesa prompt.':'✓ Your account is fully paid.'}</div></section>
+  content.innerHTML=`<div class="tenant-dashboard-shell"><button class="tenant-menu-toggle" onclick="toggleTenantMenu()">☰ <span>Tenant menu</span></button><div id="tenantPortalBackdrop" class="tenant-portal-backdrop" onclick="toggleTenantMenu()" aria-hidden="true"></div><aside id="tenantPortalSidebar" class="tenant-portal-sidebar" aria-label="Tenant dashboard navigation"><div class="tenant-sidebar-brand"><span>🏠</span><div><strong>SEGUTON</strong><small>Tenant account</small></div><button class="tenant-sidebar-close" onclick="toggleTenantMenu()" aria-label="Close tenant menu">×</button></div><div class="tenant-sidebar-welcome"><span class="portal-kicker">SIGNED IN AS</span><strong>${escapeHtml(latest.name)}</strong><small>${escapeHtml(latest.houseNo)} · ${escapeHtml(latest.phone||'')}</small></div><nav class="tenant-sidebar-nav"><span class="tenant-nav-label">ACCOUNT</span><button data-tenant-tab="summary" class="tenant-portal-tab active" onclick="showTenantPortalTab('summary')">▦ <span>Overview</span></button><button data-tenant-tab="pay" class="tenant-portal-tab" onclick="showTenantPortalTab('pay')">↗ <span>Pay rent</span>${totalBalance>0?`<b>Ksh ${totalBalance.toLocaleString()}</b>`:''}</button><span class="tenant-nav-label">RECORDS</span><button data-tenant-tab="charges" class="tenant-portal-tab" onclick="showTenantPortalTab('charges')">▤ <span>Charges</span></button><button data-tenant-tab="history" class="tenant-portal-tab" onclick="showTenantPortalTab('history')">◷ <span>Full history</span></button><span class="tenant-nav-label">ACCOUNT SETTINGS</span><button data-tenant-tab="contact" class="tenant-portal-tab" onclick="showTenantPortalTab('contact')">⚙ <span>Contact & updates</span></button></nav><div class="tenant-sidebar-spacer"></div><div class="tenant-sidebar-status"><i></i><span>Database records</span></div><button class="tenant-sidebar-logout" onclick="logoutTenantPortal()">↪ <span>Log out</span></button></aside><main class="tenant-dashboard-main"><div class="tenant-dashboard-topbar"><div><span class="portal-kicker">TENANT ACCOUNT</span><h1>Welcome back, ${escapeHtml(latest.name.split(' ')[0])}</h1><p>View your room, rent balance, payments, and email updates.</p></div><div class="tenant-topbar-actions"><span class="tenant-status-pill ${escapeHtml(latest.status)}">${escapeHtml(latest.status)}</span><button onclick="refreshTenantPortal()">↻ Refresh</button></div></div>
+    <section id="tenantTab-summary" class="tenant-tab-panel"><div class="tenant-room-card"><div><span class="portal-kicker">YOUR ROOM</span><h2>${escapeHtml(latest.houseNo)}</h2><p>Application status: <strong>${escapeHtml(latest.status)}</strong></p></div><div class="tenant-room-meta"><span>Phone</span><strong>${escapeHtml(latest.phone||'-')}</strong><span>Email</span><strong>${escapeHtml(latest.email||'Not added')}</strong></div></div><div class="portal-summary"><div class="portal-stat"><span>Total expected</span><strong>Ksh ${totalExpected.toLocaleString()}</strong></div><div class="portal-stat"><span>Total paid</span><strong>Ksh ${totalPaid.toLocaleString()}</strong></div><div class="portal-stat highlight"><span>Current balance</span><strong>Ksh ${totalBalance.toLocaleString()}</strong></div></div><div class="summary-next-step">${totalBalance>0?'Your next step is to open Pay rent and pay with M-Pesa.':'✓ Your account is fully paid.'}</div></section>
     <section id="tenantTab-pay" class="tenant-tab-panel">${paymentForms||'<div class="paid-banner">✓ Your current balance is fully paid. There is no payment required right now.</div>'}</section>
     <section id="tenantTab-charges" class="tenant-tab-panel"><div class="section-heading"><h2>Additional charges</h2><span>${feeHistory.length} charge${feeHistory.length===1?'':'s'}</span></div>${charges}</section>
     <section id="tenantTab-history" class="tenant-tab-panel"><div class="section-heading"><h2>Applications</h2><span>${records.length} record${records.length===1?'':'s'}</span></div>${applications}<div class="section-heading"><h2>Rent charges</h2><span>${rentHistory.length} charge${rentHistory.length===1?'':'s'}</span></div>${rentHistory.length?`<div class="table-scroll"><table class="payment-history"><thead><tr><th>Month</th><th>Room</th><th>Amount</th><th>Date generated</th></tr></thead><tbody>${rentHistory.map(charge=>`<tr><td>${escapeHtml(charge.month||'-')}</td><td>${escapeHtml(charge.houseNo)}</td><td>Ksh ${Number(charge.amount||0).toLocaleString()}</td><td>${escapeHtml(charge.generatedAt?new Date(charge.generatedAt).toLocaleDateString():'-')}</td></tr>`).join('')}</tbody></table></div>`:'<p class="empty-portal">No monthly rent charges have been generated yet.</p>'}<div class="section-heading"><h2>Payment history</h2><span>${history.length} payment${history.length===1?'':'s'}</span></div>${payments}</section>
     <section id="tenantTab-contact" class="tenant-tab-panel"><div class="contact-update-card"><h2>Contact & payment updates</h2><p class="sub">Keep your email and phone number current. Choose which email updates you want to receive.</p><form id="tenantContactForm" onsubmit="saveTenantContact(event)"><label>Email for updates</label><input type="email" id="tenantUpdateEmail" value="${escapeHtml(latest.email||'')}" placeholder="tenant@example.com"><label>Phone for payment prompts</label><input type="tel" id="tenantUpdatePhone" value="${escapeHtml(latest.phone||'')}" placeholder="+254 712 345 678 or 0712 345 678" required><fieldset class="notification-preferences"><legend>Email preferences</legend><label><input type="checkbox" id="prefPayments" ${latest.notificationPreferences?.payments!==false?'checked':''}> Payment receipts and M-Pesa confirmations</label><label><input type="checkbox" id="prefCharges" ${latest.notificationPreferences?.charges!==false?'checked':''}> Monthly rent and fee updates</label><label><input type="checkbox" id="prefAccount" ${latest.notificationPreferences?.account!==false?'checked':''}> Account and contact updates</label></fieldset><button class="submit" type="submit">Save contact preferences</button><div id="tenantContactStatus" class="status-msg"></div></form></div></section>
-    <div class="portal-footer"><span>Refresh after an STK payment is confirmed.</span><button onclick="refreshTenantPortal()">Refresh balance</button></div></main></div>`;
+    <div class="portal-footer"><span>Refresh after your M-Pesa payment is confirmed.</span><button onclick="refreshTenantPortal()">Refresh balance</button></div></main></div>`;
   document.getElementById('tenantPortalLogin').style.display='none'; content.style.display='block'; showTenantPortalTab('summary');
 }
 async function saveTenantContact(event){
@@ -481,7 +481,7 @@ async function saveTenantContact(event){
 async function refreshTenantPortal(){
   try{
     const data=await tenantPortalRequest({name:document.getElementById('tenantLoginName').value,idNumber:document.getElementById('tenantLoginId').value,phone:document.getElementById('tenantLoginPhone').value});
-    renderTenantPortal(data); showToast('Balance refreshed.','success');
+    renderTenantPortal(data); showToast('Tenant balance refreshed.','success');
   }catch(error){ showToast(error.message); }
 }
 async function startTenantStkPayment(tenantId){
@@ -489,15 +489,15 @@ async function startTenantStkPayment(tenantId){
   if(!Number.isInteger(amount) || amount<1){ showToast('Enter a valid payment amount.'); return; }
   try{
     const response=await fetch('/api/stkpush',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tenantId,amount,name:document.getElementById('tenantLoginName').value,idNumber:document.getElementById('tenantLoginId').value,phone:document.getElementById('tenantPaymentPhone-'+tenantId)?.value || document.getElementById('tenantLoginPhone').value})});
-    const payload=await response.json().catch(()=>({error:'STK Push returned an invalid response.'}));
+    const payload=await response.json().catch(()=>({error:'M-Pesa payment request returned an invalid response.'}));
     if(!response.ok) throw new Error(payload.error||'Unable to send STK prompt.');
-    showToast(payload.message||'STK prompt sent. Check your phone for the M-Pesa PIN.','success');
+    showToast(payload.message||'M-Pesa prompt sent. Check your phone and enter your PIN.','success');
     setTimeout(refreshTenantPortal,15000);
   }catch(error){ showToast(error.message); }
 }
 async function logoutTenantPortal(){
   const button=document.querySelector('.tenant-sidebar-logout'); setButtonBusy(button,true,'Logging out…');
-  try{ await tenantPortalRequest({action:'logout'}); showToast('Tenant portal logged out safely.','success'); }
+  try{ await tenantPortalRequest({action:'logout'}); showToast('Tenant account logged out safely.','success'); }
   catch(error){ showToast('Logout completed locally.','info'); }
   finally{
     document.getElementById('tenantPortalContent').style.display='none'; document.getElementById('tenantPortalContent').innerHTML=''; document.getElementById('tenantPortalLogin').style.display='block'; document.getElementById('tenantPortalForm').reset();
@@ -634,7 +634,7 @@ async function syncFromDatabase(){
 function showPage(pageId){
   document.body.classList.toggle('admin-mode',pageId==='managePage');
   document.body.classList.toggle('tenant-portal-mode',pageId==='tenantPortalPage');
-  document.title=pageId==='tenantPortalPage'?'SEGUTON Tenant Portal':pageId==='managePage'?'SEGUTON Management Console':'SEGUTON Estate';
+  document.title=pageId==='tenantPortalPage'?'SEGUTON Tenant Login · Pay rent with M-Pesa':pageId==='managePage'?'SEGUTON Management Console':'SEGUTON Estate';
   if(pageId!=='managePage'){ document.querySelector('.admin-sidebar')?.classList.remove('open'); document.body.classList.remove('admin-drawer-open'); }
   if(pageId!=='tenantPortalPage'){ document.getElementById('tenantPortalSidebar')?.classList.remove('open'); document.body.classList.remove('tenant-drawer-open'); }
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -677,7 +677,7 @@ document.getElementById('tenantPortalForm').addEventListener('submit', async (e)
   const button=document.getElementById('tenantPortalSubmit'); setButtonBusy(button,true,'Checking…');
   try{
     const data=await tenantPortalRequest({name:document.getElementById('tenantLoginName').value,idNumber:document.getElementById('tenantLoginId').value,phone:document.getElementById('tenantLoginPhone').value});
-    renderTenantPortal(data); showToast('Payment information loaded.','success');
+    renderTenantPortal(data); showToast('Tenant account loaded.','success');
   }catch(error){ document.getElementById('tenantPortalStatus').innerText=error.message; document.getElementById('tenantPortalStatus').style.color='crimson'; showToast(error.message); }
   finally{ setButtonBusy(button,false); }
 });
