@@ -44,7 +44,7 @@ module.exports = async (req, res) => {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(String(body.dateEntered))) return res.status(400).json({ error: 'Enter a valid date entered.' });
       if (await tenants.findOne({ houseNo: body.houseNo, status: 'accepted' })) return res.status(409).json({ error: `Room ${body.houseNo} is already occupied.` });
       if (await tenants.findOne({ idNumber: idNumber, status: { $in: ['pending', 'accepted'] } })) return res.status(409).json({ error: 'An active application already exists for this ID number.' });
-      const tenant = { id: Date.now() * 1000 + Math.floor(Math.random() * 1000), name, idNumber, email, phone: phone.startsWith('0') ? '+254' + phone.slice(1) : phone, houseNo: body.houseNo, dateEntered: body.dateEntered, monthlyRent: expected, expected, paid: 0, feesTotal: 0, balance: expected, status: 'pending', paymentHistory: [], feeHistory: [], timestamp: new Date().toLocaleString(), createdAt: new Date() };
+      const tenant = { id: Date.now() * 1000 + Math.floor(Math.random() * 1000), name, idNumber, email, phone: phone.startsWith('0') ? '+254' + phone.slice(1) : phone, notificationPreferences: { payments: true, charges: true, account: true }, houseNo: body.houseNo, dateEntered: body.dateEntered, monthlyRent: expected, expected, paid: 0, feesTotal: 0, balance: expected, status: 'pending', paymentHistory: [], feeHistory: [], timestamp: new Date().toLocaleString(), createdAt: new Date() };
       await tenants.insertOne(tenant);
       await notifyAdmins(db, { title: 'New tenant application', details: `${tenant.name} applied for room ${tenant.houseNo}. Tenant email: ${email || 'not provided'}.` });
       return res.status(201).json({ tenant: cleanTenant(tenant), emailNotificationsEnabled: Boolean(email) });
@@ -72,7 +72,7 @@ module.exports = async (req, res) => {
           if (result.modifiedCount) {
             generated += 1; total += monthlyRent;
             adminUpdates.push(`${record.name} (${record.houseNo}): Ksh ${monthlyRent.toLocaleString()}`);
-            notificationJobs.push(notifyTenant({ ...record, expected: Number(record.expected || 0) + monthlyRent, balance: Math.max(0, Number(record.expected || 0) + monthlyRent - Number(record.paid || 0)) }, { title: `Monthly rent generated for ${rentMonth}`, amount: monthlyRent, balance: Math.max(0, Number(record.expected || 0) + monthlyRent - Number(record.paid || 0)), detail: 'Monthly rent' }));
+            notificationJobs.push(notifyTenant({ ...record, expected: Number(record.expected || 0) + monthlyRent, balance: Math.max(0, Number(record.expected || 0) + monthlyRent - Number(record.paid || 0)) }, { title: `Monthly rent generated for ${rentMonth}`, amount: monthlyRent, balance: Math.max(0, Number(record.expected || 0) + monthlyRent - Number(record.paid || 0)), detail: 'Monthly rent', preference: 'charges' }));
           } else skipped += 1;
         }
         const notificationResults = await Promise.allSettled(notificationJobs);
@@ -115,7 +115,7 @@ module.exports = async (req, res) => {
           $push: { feeHistory: { category, amount, description, date: new Date().toISOString(), source: 'Management fee' } }
         });
         try {
-          await notifyTenant({ ...tenant, expected: nextExpected, balance: Math.max(0, nextExpected - Number(tenant.paid || 0)) }, { title: `${category} fee added`, amount, balance: Math.max(0, nextExpected - Number(tenant.paid || 0)), detail: description || category });
+          await notifyTenant({ ...tenant, expected: nextExpected, balance: Math.max(0, nextExpected - Number(tenant.paid || 0)) }, { title: `${category} fee added`, amount, balance: Math.max(0, nextExpected - Number(tenant.paid || 0)), detail: description || category, preference: 'charges' });
         } catch (error) { console.error('SEGUTON notification error:', error.message); }
         await notifyAdmins(db, { title: 'Tenant fee added', details: `${category} of Ksh ${amount.toLocaleString()} added to ${tenant.name} (${tenant.houseNo}). New balance: Ksh ${Math.max(0, nextExpected - Number(tenant.paid || 0)).toLocaleString()}.` });
         return res.status(200).json({ ok: true, message: `${category} fee of Ksh ${amount.toLocaleString()} added.` });
@@ -135,12 +135,12 @@ module.exports = async (req, res) => {
       if (paymentAmount !== undefined || (paid !== undefined && Number(paid) > Number(tenant.paid || 0))) {
         const amount = paymentAmount !== undefined ? Number(paymentAmount) : Number(paid) - Number(tenant.paid || 0);
         await Promise.allSettled([
-          notifyTenant(updatedTenant, { title: 'Payment recorded', amount, balance: Number(updatedTenant?.balance || 0), detail: 'Management payment' }),
+          notifyTenant(updatedTenant, { title: 'Payment recorded', amount, balance: Number(updatedTenant?.balance || 0), detail: 'Management payment', preference: 'payments' }),
           notifyAdmins(db, { title: 'Tenant payment recorded', details: `${tenant.name} paid Ksh ${amount.toLocaleString()} for ${tenant.houseNo}. New balance: Ksh ${Number(updatedTenant?.balance || 0).toLocaleString()}.` })
         ]);
       } else if (status !== undefined) {
         await Promise.allSettled([
-          notifyTenant(updatedTenant, { title: `Application ${status}`, amount: 0, balance: Number(updatedTenant?.balance || 0), detail: `Room ${tenant.houseNo}` }),
+          notifyTenant(updatedTenant, { title: `Application ${status}`, amount: 0, balance: Number(updatedTenant?.balance || 0), detail: `Room ${tenant.houseNo}`, preference: 'account' }),
           notifyAdmins(db, { title: `Tenant application ${status}`, details: `${tenant.name}'s application for ${tenant.houseNo} was marked ${status}.` })
         ]);
       }

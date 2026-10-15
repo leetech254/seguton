@@ -22,6 +22,7 @@ A browser-based rental and tenant management system.
 - Tenant registration collects normalized Kenyan phone numbers, validates the 8-digit Kenyan National ID format, auto-fills the rent due, and only shows available rooms
 - Tenant Portal login using name, National ID, and phone number shows applications, payment history, total paid, and live balance
 - Tenant Portal dropdown dashboard with Summary, Pay rent, Charges, Full history, and Contact & updates tabs; tenants can update their email and phone number for future notifications and payment prompts
+- Tenant email preferences let each tenant enable or disable payment receipts, monthly rent/fee updates, and account/contact update emails; existing tenants default to all enabled
 - Management payment entry accepts the amount received, adds it to the tenant total, and makes the new payment visible in the Tenant Portal
 - Admin payment-history deletion requires confirmation and resets the tenant paid total to Ksh 0 with the full balance restored
 - Admin tenant deletion permanently removes the application, payment, fee, and personal details after typed `DELETE TENANT` confirmation; the tenant's room is immediately available again
@@ -72,7 +73,7 @@ The app requires the API and database environment variables. If the database is 
 - Successful STK Push payments send a receipt/update to the tenant email when provided and an administrator alert through Resend; administrator alerts also cover new applications, manual payments, fees, rent generation, status changes, and tenant deletion
 - `/api/auth` — one-time administrator setup with email verification, login, resend verification, logout, session status, password changes, forgot-password, and one-time password reset links
 - `POST /api/tenant` — verifies tenant name, 8-digit ID, and phone and returns applications, rent charges, fee history, payment history, email, and balance
-- `PATCH /api/tenant` — verifies the current tenant details and updates the tenant email and phone number for future payment prompts and notifications
+- `PATCH /api/tenant` — verifies the current tenant details and updates the tenant email, phone number, and payment/charge/account email preferences
 - `POST /api/stkpush` — sends an STK prompt for an outstanding tenant balance; payment is not credited until the provider callback confirms success
 - `POST /api/stk-callback` — receives CourtneyTech payment results and records successful M-Pesa payments
 - `GET /api/data?view=rooms` — public room catalog for tenant registration; tenant records require administrator login

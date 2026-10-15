@@ -39,7 +39,7 @@ module.exports = async (req, res) => {
         const balance = Math.max(0, Number(updated.expected || 0) - Number(updated.paid || 0));
         await tenants.updateOne({ id: tenant.id }, { $set: { balance } });
         await Promise.allSettled([
-          notifyTenant({ ...updated, balance }, { title: 'M-Pesa payment received', amount, balance, detail: 'STK Push payment', receipt: data.mpesaReceipt || null }),
+          notifyTenant({ ...updated, balance }, { title: 'M-Pesa payment received', amount, balance, detail: 'STK Push payment', receipt: data.mpesaReceipt || null, preference: 'payments' }),
           notifyAdmins(db, { title: 'M-Pesa payment received', details: `${updated.name} paid Ksh ${amount.toLocaleString()} for ${updated.houseNo}. New balance: Ksh ${balance.toLocaleString()}${data.mpesaReceipt ? `. Receipt: ${data.mpesaReceipt}.` : '.'}` })
         ]);
       }

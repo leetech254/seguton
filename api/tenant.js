@@ -8,6 +8,11 @@ function normalizePhone(value) {
   return null;
 }
 
+function notificationPreferences(value) {
+  const source = value && typeof value === 'object' ? value : {};
+  return { payments: source.payments !== false, charges: source.charges !== false, account: source.account !== false };
+}
+
 function publicTenant(tenant) {
   const data = cleanTenant(tenant);
   return {
@@ -29,6 +34,7 @@ function publicTenant(tenant) {
     feeHistory: Array.isArray(data.feeHistory) ? data.feeHistory : [],
     feesTotal: Number(data.feesTotal || 0),
     email: data.email || '',
+    notificationPreferences: notificationPreferences(data.notificationPreferences),
     monthlyRent: Number(data.monthlyRent || 0),
     rentCharges: Array.isArray(data.rentCharges) ? data.rentCharges : []
   };
@@ -65,14 +71,15 @@ module.exports = async (req, res) => {
     if (req.method === 'PATCH') {
       const email = String(body.email || '').trim().toLowerCase();
       const newPhone = normalizePhone(body.newPhone || body.phone);
+      const preferences = notificationPreferences(body.notificationPreferences === undefined ? matches[0].notificationPreferences : body.notificationPreferences);
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Enter a valid email address.' });
       if (!newPhone) return res.status(400).json({ error: 'Enter a valid Kenyan phone number using +254 7xx/1xx or 07xx/01xx.' });
-      const result = await tenantCollection.updateMany({ id: { $in: matches.map(record => record.id) } }, { $set: { email, phone: newPhone, updatedAt: new Date() } });
+      const result = await tenantCollection.updateMany({ id: { $in: matches.map(record => record.id) } }, { $set: { email, phone: newPhone, notificationPreferences: preferences, updatedAt: new Date() } });
       await Promise.allSettled([
-        notifyTenantAccountUpdate({ ...matches[0], email, phone: newPhone }, { title: 'Your contact details were updated', details: `Your notification email is now ${email || 'not set'} and your payment prompt number is ${newPhone}.` }),
-        notifyAdmins(db, { title: 'Tenant contact details updated', details: `${matches[0].name} (${matches[0].houseNo}) changed their notification email to ${email || 'not set'} and payment phone to ${newPhone}.` })
+        notifyTenantAccountUpdate({ ...matches[0], email, phone: newPhone, notificationPreferences: preferences }, { title: 'Your contact details were updated', details: `Your notification email is now ${email || 'not set'}, your payment prompt number is ${newPhone}, and your email preferences were saved.` }),
+        notifyAdmins(db, { title: 'Tenant contact details updated', details: `${matches[0].name} (${matches[0].houseNo}) changed their notification email to ${email || 'not set'} and payment phone to ${newPhone}. Email categories: payments ${preferences.payments ? 'on' : 'off'}, rent/fees ${preferences.charges ? 'on' : 'off'}, account updates ${preferences.account ? 'on' : 'off'}.` })
       ]);
-      return res.status(200).json({ ok: true, updated: result.modifiedCount, email, phone: newPhone, message: 'Contact details updated. Future account and payment updates will use this email and phone number.' });
+      return res.status(200).json({ ok: true, updated: result.modifiedCount, email, phone: newPhone, notificationPreferences: preferences, message: 'Contact details and email preferences updated successfully.' });
     }
 
     return res.status(200).json({ tenants: matches.map(publicTenant) });
