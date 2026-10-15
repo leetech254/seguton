@@ -135,7 +135,7 @@ body.tenant-portal-mode .nav{display:none}body.tenant-portal-mode{background:#ee
   <h2>🏠 SEGUTON</h2>
   <div class="nav-links">
     <button id="btnTenant" class="active" onclick="showPage('tenantPage')">Tenants Entry</button>
-    <button id="btnTenantPortal" onclick="showPage('tenantPortalPage')">Pay rent with M-Pesa</button>
+    <button id="btnTenantPortal" onclick="openTenantPortal()">Pay rent with M-Pesa</button>
     <button id="btnManage" onclick="openManagement()">Management</button>
   </div>
 </div>
@@ -149,7 +149,7 @@ body.tenant-portal-mode .nav{display:none}body.tenant-portal-mode{background:#ee
       <p>Submit your tenant details, choose an available room, and keep your rent information organized in one secure place.</p>
       <div class="hero-actions">
         <button class="hero-primary" onclick="document.getElementById('registrationCard').scrollIntoView({behavior:'smooth',block:'center'})">Start registration</button>
-        <button class="hero-payment" onclick="showPage('tenantPortalPage')">Pay rent with M-Pesa</button>
+        <button class="hero-payment" onclick="openTenantPortal()">Pay rent with M-Pesa</button>
         <button class="hero-secondary" onclick="openManagement()">Management login</button>
       </div>
       <div class="hero-points">
@@ -279,7 +279,7 @@ body.tenant-portal-mode .nav{display:none}body.tenant-portal-mode{background:#ee
       </div>
       <div class="admin-sidebar-spacer"></div>
       <div class="admin-live"><i></i><span>Live database</span></div>
-      <button class="admin-logout" onclick="logoutAdmin()">↪ <span>Log out</span></button>
+      <button id="logoutButton" class="admin-logout" onclick="logoutAdmin()">↪ <span>Log out</span></button>
     </aside>
     <main class="manage-container">
     <div class="toolbar admin-topbar">
@@ -421,8 +421,24 @@ async function loadPublicRooms(){
 function tenantPortalRequest(body){
   const method=body?.method || 'POST';
   const payload={...body}; delete payload.method;
-  return fetch('/api/tenant',{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+  return fetch('/api/tenant',{method,credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
     .then(async response=>{ const payload=await response.json().catch(()=>({error:'Tenant portal returned an invalid response.'})); if(!response.ok) throw new Error(payload.error||'Tenant portal request failed.'); return payload; });
+}
+let tenantRestoreInProgress=false;
+async function restoreTenantSession(showError=false){
+  if(tenantRestoreInProgress) return;
+  tenantRestoreInProgress=true;
+  try{
+    const data=await tenantPortalRequest({action:'session'});
+    renderTenantPortal(data);
+    showPage('tenantPortalPage');
+  }catch(error){
+    if(showError) showToast(error.message);
+  }finally{ tenantRestoreInProgress=false; }
+}
+function openTenantPortal(){
+  showPage('tenantPortalPage');
+  if(document.getElementById('tenantPortalContent').style.display!=='block') restoreTenantSession(false);
 }
 function showTenantPortalTab(tab){
   document.querySelectorAll('#tenantPortalContent .tenant-tab-panel').forEach(panel=>panel.style.display=panel.id==='tenantTab-'+tab?'block':'none');
@@ -479,7 +495,15 @@ async function startTenantStkPayment(tenantId){
     setTimeout(refreshTenantPortal,15000);
   }catch(error){ showToast(error.message); }
 }
-function logoutTenantPortal(){ document.getElementById('tenantPortalContent').style.display='none'; document.getElementById('tenantPortalContent').innerHTML=''; document.getElementById('tenantPortalLogin').style.display='block'; document.getElementById('tenantPortalForm').reset(); showToast('Tenant portal logged out.','success'); showPage('tenantPage'); }
+async function logoutTenantPortal(){
+  const button=document.querySelector('.tenant-sidebar-logout'); setButtonBusy(button,true,'Logging out…');
+  try{ await tenantPortalRequest({action:'logout'}); showToast('Tenant portal logged out safely.','success'); }
+  catch(error){ showToast('Logout completed locally.','info'); }
+  finally{
+    document.getElementById('tenantPortalContent').style.display='none'; document.getElementById('tenantPortalContent').innerHTML=''; document.getElementById('tenantPortalLogin').style.display='block'; document.getElementById('tenantPortalForm').reset();
+    setButtonBusy(button,false); showPage('tenantPage');
+  }
+}
 
 async function authRequest(method, body){
   const response = await fetch('/api/auth', {method, credentials:'include', headers:{'Content-Type':'application/json'}, body:body ? JSON.stringify(body) : undefined});
@@ -954,6 +978,23 @@ function generateReport(){
 
 renderManagement();
 loadPublicRooms();
+async function restorePersistentSession(){
+  try{
+    const auth=await authRequest('GET');
+    if(auth.authenticated){
+      document.getElementById('adminIdentity').innerText='Administrator • '+auth.user.email;
+      showPage('managePage');
+      setAdminTab('overview');
+      knownMpesaPayments = new Set();
+      adminHasPaymentBaseline = false;
+      await syncFromDatabase();
+      startAdminPaymentPolling();
+      return;
+    }
+  }catch(error){ /* Continue to check for a tenant session. */ }
+  await restoreTenantSession(false);
+}
+restorePersistentSession();
 </script>
 </body>
   </html>

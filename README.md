@@ -24,6 +24,8 @@ A browser-based rental and tenant management system.
 - Tenant Portal dropdown dashboard with Summary, Pay rent, Charges, Full history, and Contact & updates tabs; tenants can update their email and phone number for future notifications and payment prompts
 - Tenant Portal now uses a dedicated responsive sidebar dashboard with grouped Account, Records, and Account Settings navigation; mobile users get a drawer menu with balance badges and quick refresh/logout actions
 - Tenant login opens a dedicated tenant-only mode that hides the public landing title, global navigation, and management controls; only tenant login and tenant dashboard features are shown
+- Administrator and tenant sessions persist across page refreshes through secure HTTP-only cookies; tenant portal data is restored from the database without localStorage or browser-saved credentials
+- Tenant and administrator logout invalidate their server session cookies and return to the correct public entry screen with clear success feedback
 - Tenant email preferences let each tenant enable or disable payment receipts, monthly rent/fee updates, and account/contact update emails; existing tenants default to all enabled
 - Management payment entry accepts the amount received, adds it to the tenant total, and makes the new payment visible in the Tenant Portal
 - Admin payment-history deletion requires confirmation and resets the tenant paid total to Ksh 0 with the full balance restored

@@ -1,5 +1,6 @@
 const { getDatabase, initializeDatabase, cleanTenant } = require('../lib/database');
 const { notifyTenantAccountUpdate, notifyAdmins } = require('../lib/notifications');
+const { setTenantSession, readTenantSession, clearTenantSession } = require('../lib/auth');
 
 function normalizePhone(value) {
   const compact = String(value || '').replace(/[\s-]/g, '');
@@ -50,6 +51,23 @@ module.exports = async (req, res) => {
 
   try {
     const body = req.body || {};
+    const db = await getDatabase();
+    await initializeDatabase(db);
+    const tenantCollection = db.collection('tenants');
+
+    if (req.method === 'POST' && body.action === 'logout') {
+      clearTenantSession(res);
+      return res.status(200).json({ ok: true, message: 'Tenant portal logged out safely.' });
+    }
+    if (req.method === 'POST' && body.action === 'session') {
+      const session = readTenantSession(req);
+      if (!session) return res.status(401).json({ error: 'Tenant session expired. Please sign in again.' });
+      const ids = session.ids.map(id => Number.isNaN(Number(id)) ? id : Number(id));
+      const sessionRecords = await tenantCollection.find({ id: { $in: ids }, status: { $in: ['pending', 'accepted'] } }).sort({ createdAt: -1 }).toArray();
+      if (!sessionRecords.length) { clearTenantSession(res); return res.status(401).json({ error: 'Tenant record is no longer available. Please sign in again.' }); }
+      return res.status(200).json({ tenants: sessionRecords.map(publicTenant), restored: true });
+    }
+
     const name = String(body.name || '').trim();
     const idNumber = String(body.idNumber || '').trim();
     const phone = normalizePhone(body.phone);
@@ -57,9 +75,6 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'Enter your full name, 8-digit National ID number, and valid Kenyan phone number.' });
     }
 
-    const db = await getDatabase();
-    await initializeDatabase(db);
-    const tenantCollection = db.collection('tenants');
     const records = await tenantCollection.find({
       idNumber,
       phone,
@@ -67,6 +82,7 @@ module.exports = async (req, res) => {
     }).sort({ createdAt: -1 }).toArray();
     const matches = records.filter((tenant) => String(tenant.name || '').toLowerCase() === name.toLowerCase());
     if (!matches.length) return res.status(401).json({ error: 'No matching tenant record was found. Check your name, ID number, and phone number.' });
+    setTenantSession(res, matches);
 
     if (req.method === 'PATCH') {
       const email = String(body.email || '').trim().toLowerCase();
@@ -75,6 +91,7 @@ module.exports = async (req, res) => {
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Enter a valid email address.' });
       if (!newPhone) return res.status(400).json({ error: 'Enter a valid Kenyan phone number using +254 7xx/1xx or 07xx/01xx.' });
       const result = await tenantCollection.updateMany({ id: { $in: matches.map(record => record.id) } }, { $set: { email, phone: newPhone, notificationPreferences: preferences, updatedAt: new Date() } });
+      setTenantSession(res, matches);
       await Promise.allSettled([
         notifyTenantAccountUpdate({ ...matches[0], email, phone: newPhone, notificationPreferences: preferences }, { title: 'Your contact details were updated', details: `Your notification email is now ${email || 'not set'}, your payment prompt number is ${newPhone}, and your email preferences were saved.` }),
         notifyAdmins(db, { title: 'Tenant contact details updated', details: `${matches[0].name} (${matches[0].houseNo}) changed their notification email to ${email || 'not set'} and payment phone to ${newPhone}. Email categories: payments ${preferences.payments ? 'on' : 'off'}, rent/fees ${preferences.charges ? 'on' : 'off'}, account updates ${preferences.account ? 'on' : 'off'}.` })
