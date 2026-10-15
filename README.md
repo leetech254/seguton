@@ -48,6 +48,7 @@ A browser-based rental and tenant management system.
    - `COURTNEY_CALLBACK_SECRET`: a random callback secret used to protect payment confirmations
    - `RESEND_API_KEY`: optional Resend API key for tenant notifications and administrator alerts
    - `NOTIFICATION_FROM_EMAIL`: verified Resend sender, for example `SEGUTON <notifications@example.com>`
+   - `APP_URL`: public Vercel URL used in administrator verification and password-reset links, for example `https://seguton.vercel.app`
    - `AT_USERNAME`: optional Africa's Talking username for tenant SMS notifications
    - `AT_API_KEY`: Africa's Talking API key
    - `AT_SENDER_ID`: optional approved SMS sender ID
@@ -69,7 +70,7 @@ The app requires the API and database environment variables. If the database is 
 - `PATCH /api/data` with `{ "id": 123, "action": "add-fee", "feeCategory": "Water", "feeAmount": 500, "feeDescription": "October water bill" }` — admin-only fee assessment and balance update
 - Monthly rent generation and fee assessment automatically attempt to notify the tenant by SMS and/or email with the charge amount, room, and updated balance
 - Successful STK Push payments send a receipt/update to the tenant email when provided and an administrator alert through Resend; administrator alerts also cover new applications, manual payments, fees, rent generation, status changes, and tenant deletion
-- `/api/auth` — one-time administrator setup, login, logout, session status, and password changes
+- `/api/auth` — one-time administrator setup with email verification, login, resend verification, logout, session status, password changes, forgot-password, and one-time password reset links
 - `POST /api/tenant` — verifies tenant name, 8-digit ID, and phone and returns applications, rent charges, fee history, payment history, email, and balance
 - `PATCH /api/tenant` — verifies the current tenant details and updates the tenant email and phone number for future payment prompts and notifications
 - `POST /api/stkpush` — sends an STK prompt for an outstanding tenant balance; payment is not credited until the provider callback confirms success
@@ -77,3 +78,5 @@ The app requires the API and database environment variables. If the database is 
 - `GET /api/data?view=rooms` — public room catalog for tenant registration; tenant records require administrator login
 
 Never commit `MONGODB_URI` or other secrets to the repository.
+
+Administrator setup requires `RESEND_API_KEY`. The first administrator must open the emailed verification link before signing in. Password reset links expire after 30 minutes, are stored only as hashes, and can be used once. Password recovery responses are intentionally generic so they do not reveal whether an administrator email exists.
