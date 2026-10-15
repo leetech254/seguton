@@ -24,6 +24,7 @@ A browser-based rental and tenant management system.
 - Tenant Portal login using name, National ID, and phone number shows applications, payment history, total paid, and live balance
 - Tenant Portal dropdown dashboard with Summary, Pay rent, Charges, Full history, and Contact & updates tabs; tenants can update their email and phone number for future notifications and payment prompts
 - Tenant Portal now uses a dedicated responsive sidebar dashboard with grouped Account, Records, and Account Settings navigation; mobile users get a drawer menu with balance badges and quick refresh/logout actions
+- Tenant dashboard responsive layout adapts to desktop, tablet, and mobile screens with compact cards, wrapped payment controls, scrollable history tables, and a full-width mobile navigation drawer
 - Tenant login opens a dedicated tenant-only mode that hides the public landing title, global navigation, and management controls; only tenant login and tenant dashboard features are shown
 - Administrator and tenant sessions persist across page refreshes through secure HTTP-only cookies; tenant portal data is restored from the database without localStorage or browser-saved credentials
 - Tenant and administrator logout invalidate their server session cookies and return to the correct public entry screen with clear success feedback
