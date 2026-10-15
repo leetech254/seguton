@@ -136,7 +136,7 @@ body.tenant-portal-mode .nav{display:none}body.tenant-portal-mode{background:#ee
 <div class="nav">
   <h2>🏠 SEGUTON</h2>
   <div class="nav-links">
-    <button id="btnTenant" class="active" onclick="showPage('tenantPage')">Tenants Entry</button>
+    <button id="btnTenant" class="active" onclick="showPage('tenantPage')">Tenant Registration</button>
     <button id="btnTenantPortal" onclick="openTenantPortal()">Tenant Login · Pay rent with M-Pesa</button>
     <button id="btnManage" onclick="openManagement()">Management</button>
   </div>
@@ -146,24 +146,24 @@ body.tenant-portal-mode .nav{display:none}body.tenant-portal-mode{background:#ee
 <div id="tenantPage" class="page active">
   <div class="landing-layout">
     <section class="hero-copy">
-      <div class="hero-eyebrow">A simpler way to manage your stay</div>
-      <h1>Find your place at <span>SEGUTON</span>.</h1>
-      <p>Submit your tenant details, choose an available room, and keep your rent information organized in one secure place.</p>
+      <div class="hero-eyebrow">SEGUTON ESTATE · SIMPLE RENT MANAGEMENT</div>
+      <h1>Apply, pay, and manage your stay with <span>SEGUTON</span>.</h1>
+      <p>Apply for an available room, pay rent with M-Pesa, and keep your room and payment information organized in one secure place.</p>
       <div class="hero-actions">
-        <button class="hero-primary" onclick="document.getElementById('registrationCard').scrollIntoView({behavior:'smooth',block:'center'})">Start registration</button>
+        <button class="hero-primary" onclick="document.getElementById('registrationCard').scrollIntoView({behavior:'smooth',block:'center'})">Apply for a room</button>
         <button class="hero-payment" onclick="openTenantPortal()">Tenant Login · Pay rent with M-Pesa</button>
         <button class="hero-secondary" onclick="openManagement()">Management login</button>
       </div>
       <div class="hero-points">
-        <div><strong>14</strong>managed rooms</div>
-        <div><strong>24/7</strong>online applications</div>
-        <div><strong>Secure</strong>database records</div>
+        <div><strong>14</strong>rooms managed</div>
+        <div><strong>M-Pesa</strong>rent payments</div>
+        <div><strong>Secure</strong>Database records</div>
       </div>
     </section>
     <div id="registrationCard" class="card landing-card hero-scroll">
-    <h1>Tenant Registration</h1>
-    <p class="sub">Apply for a room in three simple steps</p>
-    <div class="registration-steps"><div class="active"><b>1</b><span>Your details</span></div><div><b>2</b><span>Choose room</span></div><div><b>3</b><span>Pay with M-Pesa</span></div></div>
+    <h1>Apply for a room</h1>
+    <p class="sub">Complete your tenant application in three simple steps</p>
+    <div class="registration-steps"><div class="active"><b>1</b><span>Your details</span></div><div><b>2</b><span>Select a room</span></div><div><b>3</b><span>Pay with M-Pesa</span></div></div>
     <form id="tenantForm">
       <label>Full Name</label>
       <input type="text" id="name" required placeholder="John Kiprop">
@@ -175,32 +175,32 @@ body.tenant-portal-mode .nav{display:none}body.tenant-portal-mode{background:#ee
       <label>Phone Number</label>
       <input type="tel" id="phone" required inputmode="tel" autocomplete="tel" placeholder="+254 712 345 678 or 0712 345 678" pattern="(?:\+254|0)[17][0-9\s-]{8,}" title="Use +254 7xx xxx xxx, +254 1xx xxx xxx, 07xx xxx xxx or 01xx xxx xxx">
 
-      <label>Email for payment and account updates <span style="font-weight:400;color:#667085">(optional)</span></label>
+      <label>Email for updates <span style="font-weight:400;color:#667085">(optional)</span></label>
       <input type="email" id="email" autocomplete="email" placeholder="tenant@example.com">
-      <small class="field-help">Email updates are sent here when payments, fees, or application status change.</small>
+      <small class="field-help">Receive payment receipts, fee notices, and application updates by email.</small>
 
       <div class="row">
         <div>
-          <label>Room Type</label>
+          <label>Room</label>
           <select id="houseNo" required onchange="updateRent()">
             <option value="">Select Room</option>
           </select>
         </div>
         <div>
-          <label>Date Entered</label>
+          <label>Move-in date</label>
           <input type="date" id="dateEntered" required>
         </div>
       </div>
 
-      <label>Rent Amount (Ksh)</label>
-      <input type="number" id="amountPaid" required readonly placeholder="Select a room to auto-fill" aria-describedby="paymentHelp">
-      <small id="paymentHelp" class="field-help">Automatically filled as the amount due. Pay it securely in the next step with M-Pesa.</small>
+      <label>Monthly rent (Ksh)</label>
+      <input type="number" id="amountPaid" required readonly placeholder="Select a room" aria-describedby="paymentHelp">
+      <small id="paymentHelp" class="field-help">Your monthly rent is filled automatically after you select a room. Pay it securely with M-Pesa in the next step.</small>
 
-      <div class="amount-box" id="calcBox">Expected: 0 | Balance: 0</div>
-      <button type="submit" class="submit">Submit & continue to payment</button>
+      <div class="amount-box" id="calcBox">Select a room to calculate rent.</div>
+      <button type="submit" class="submit">Continue to M-Pesa payment</button>
       <div class="status-msg" id="tenantStatus"></div>
     </form>
-      <p class="welcome-note">After submission, you will open Tenant Login · Pay rent with M-Pesa to complete your payment.</p>
+      <p class="welcome-note">After you submit your details, you will review your account and complete payment with M-Pesa.</p>
     </div>
   </div>
 </div>
@@ -782,7 +782,7 @@ document.getElementById('tenantForm').addEventListener('submit', async (e)=>{
   e.target.reset();
   document.getElementById('dateEntered').valueAsDate = new Date();
   document.getElementById('amountPaid').value = '';
-  document.getElementById('calcBox').innerText = 'Rent due: 0 | Paid: 0 | Balance: 0';
+  document.getElementById('calcBox').innerText = 'Select a room to calculate rent.';
   document.getElementById('tenantLoginName').value = tenant.name;
   document.getElementById('tenantLoginId').value = tenant.idNumber;
   document.getElementById('tenantLoginPhone').value = tenant.phone;
@@ -998,6 +998,6 @@ async function restorePersistentSession(){
 }
 restorePersistentSession();
 </script>
-  <footer class="site-footer" aria-label="Application credit"><strong>All-in-one tech digital solutions</strong><span><a href="https://app.leetec.online" target="_blank" rel="noopener noreferrer">Powered by Lee Tech</a></span></footer>
+  <footer class="site-footer" aria-label="Application credit"><strong>All in one tech digital solutions</strong><span><a href="https://app.leetec.online" target="_blank" rel="noopener noreferrer">Powered by Lee Tech</a></span></footer>
 </body>
   </html>

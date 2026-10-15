@@ -13,7 +13,7 @@ A browser-based rental and tenant management system.
 - Payment updates for accepted tenants
 - Excel reporting for tenant records and summaries
 - Responsive interface with sync-status feedback
-- Branded application footer: “All-in-one tech digital solutions” powered by Lee Tech
+- Branded application footer: “All in one tech digital solutions” powered by Lee Tech
 - One-time administrator account setup with email, phone number, and password
 - Secure management login with HTTP-only sessions and hashed passwords
 - Settings tab for changing the administrator password
