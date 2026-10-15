@@ -126,6 +126,8 @@ body.admin-mode .nav{display:none}body.admin-mode #managePage{padding-top:24px}.
 @media(max-width:520px){.tenant-dashboard-main{padding:66px 12px 14px}.tenant-dashboard-topbar h1{font-size:23px}.tenant-topbar-actions{width:100%}.tenant-topbar-actions button{flex:1}.tenant-dashboard-main .portal-summary{grid-template-columns:1fr 1fr}.tenant-dashboard-main .portal-stat{padding:12px}.tenant-dashboard-main .portal-stat strong{font-size:18px}.tenant-dashboard-main .portal-footer button{font-size:12px;padding:9px 7px}}
 
 body.tenant-portal-mode .nav{display:none}body.tenant-portal-mode{background:#eef3f8}body.tenant-portal-mode .page{padding-top:28px}body.tenant-portal-mode #tenantPortalPage{background:linear-gradient(135deg,#102235,#1f4b63);padding:28px 20px;align-items:center}body.tenant-portal-mode #tenantPortalPage:before{content:'🏠  SEGUTON TENANT LOGIN';position:fixed;top:24px;left:28px;color:#f1c40f;font-weight:800;letter-spacing:1px;font-size:14px;z-index:1}body.tenant-portal-mode #tenantPortalPage .tenant-portal-card{box-shadow:0 24px 70px rgba(0,0,0,.3)}@media(max-width:520px){body.tenant-portal-mode #tenantPortalPage{padding:16px 10px}body.tenant-portal-mode #tenantPortalPage:before{top:12px;left:16px;font-size:11px}.tenant-portal-card #tenantPortalLogin{padding:24px 18px}}
+
+.site-footer{position:fixed;left:0;right:0;bottom:0;z-index:90;display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 16px;background:rgba(10,24,38,.9);backdrop-filter:blur(10px);color:rgba(255,255,255,.78);font-size:12px;letter-spacing:.15px;text-align:center}.site-footer strong{color:#f1c40f;font-weight:800}.site-footer span{color:rgba(255,255,255,.48)}#managePage,#tenantPortalPage{padding-bottom:72px}@media(max-width:520px){.site-footer{font-size:10px;padding:8px 10px;gap:5px}}
 </style>
 </head>
 <body>
@@ -996,5 +998,6 @@ async function restorePersistentSession(){
 }
 restorePersistentSession();
 </script>
+  <footer class="site-footer" aria-label="Application credit"><strong>All-in-one tech digital solutions</strong><span>Powered by Lee Tech</span></footer>
 </body>
   </html>
