@@ -160,6 +160,20 @@ body.tenant-portal-mode .nav{display:none}body.tenant-portal-mode{background:#ee
 .nav-brand{display:flex;align-items:center;gap:8px;min-width:0}.nav-brand h2{font-size:24px}.nav-toggle{display:none;border:1px solid rgba(255,255,255,.2);background:#293746;color:#fff;border-radius:10px;padding:9px 12px;font-weight:800;cursor:pointer}.nav-toggle:focus-visible,.nav-links button:focus-visible,.hero-actions button:focus-visible{outline:3px solid #f1c40f;outline-offset:2px}
 @media(max-width:850px){.nav{padding:10px 14px}.nav-brand h2{font-size:21px}.nav-toggle{display:inline-flex;align-items:center;gap:7px}.nav-links{display:none;position:absolute;top:calc(100% + 8px);left:12px;right:12px;padding:8px;background:rgba(16,34,53,.98);border:1px solid rgba(255,255,255,.16);border-radius:14px;box-shadow:0 16px 35px rgba(0,0,0,.3);flex-direction:column;gap:6px}.nav.nav-open .nav-links{display:flex}.nav-links button{width:100%;padding:12px 14px;border-radius:10px;text-align:left;font-size:14px}.page{padding-top:82px}}
 @media(max-width:520px){.nav{padding:9px 12px}.nav-brand h2{font-size:19px}.nav-toggle{padding:8px 10px;font-size:12px}.nav-links{left:8px;right:8px}.landing-layout{padding-bottom:20px}.hero-copy{padding:2px 2px}.hero-copy h1{font-size:clamp(32px,9.5vw,38px)}.hero-actions button{width:100%;min-height:46px}.hero-points{justify-content:space-between}.hero-points>div{min-width:0}.landing-card{width:calc(100% - 20px);max-width:520px;padding:17px 14px;border-radius:16px}.landing-card h1{font-size:23px}.landing-card .sub{font-size:13px;line-height:1.35;margin-bottom:13px}.registration-steps{margin:2px 0 14px}.registration-steps div{font-size:10px;padding:6px 3px}.registration-steps b{width:19px;height:19px}.form-section{margin-bottom:13px}.form-section+.form-section{padding-top:12px}.form-section legend{font-size:11px;margin-bottom:6px}.form-section label{margin-top:9px}.form-section input,.form-section select{padding:11px 10px}.form-section .field-help{margin-bottom:8px}.application-meta{margin:-3px 0 10px;font-size:11px}.application-summary{grid-template-columns:1fr 1fr;gap:6px;margin-top:9px}.application-summary div{padding:8px 9px}.application-summary strong{font-size:13px}.application-next{padding:8px 10px;font-size:11px}.step-actions{margin-top:11px}.step-actions button{min-height:42px;padding:10px 8px}.site-footer{padding-bottom:9px}}
+
+/* Homepage spacing and card alignment */
+#tenantPage{padding-bottom:90px}
+.landing-card .application-step{text-align:left}
+.landing-card .application-summary>div{display:flex;min-height:58px;flex-direction:column;justify-content:center;text-align:left}
+.landing-card .application-summary span,.landing-card .application-summary strong{width:100%;text-align:left}
+.landing-card .application-next{text-align:left}
+.landing-card .field-help{margin-top:4px;margin-bottom:12px;line-height:1.35}
+.site-footer{min-height:34px;line-height:1.35}
+@media(max-width:520px){
+  #tenantPage{padding-bottom:104px}
+  .landing-layout{padding-bottom:30px}
+  .site-footer{padding:10px 12px;line-height:1.35}
+}
 </style>
 </head>
 <body>
