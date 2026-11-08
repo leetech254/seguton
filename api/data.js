@@ -3,6 +3,13 @@ const { requireAdmin } = require('../lib/auth');
 const { notifyTenant, notifyAdmins } = require('../lib/notifications');
 const { setSecurityHeaders } = require('../lib/security');
 
+function validMoveInDate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  const today = new Date(); today.setUTCHours(0, 0, 0, 0);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value && date >= today;
+}
+
 module.exports = async (req, res) => {
   if (!setSecurityHeaders(req, res, 'GET,POST,PATCH,OPTIONS')) return res.status(403).json({ error: 'Origin is not allowed.' });
   if (req.method === 'OPTIONS') return res.status(204).end();
@@ -39,7 +46,7 @@ module.exports = async (req, res) => {
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Enter a valid email address.' });
       if (!Number.isFinite(submittedExpected) || submittedExpected !== expected || !Number.isFinite(paid) || paid < 0) return res.status(400).json({ error: 'The selected room rent is invalid. Refresh the room list and try again.' });
       if (paid !== 0) return res.status(400).json({ error: 'Registration payments must be completed through the M-Pesa payment prompt.' });
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(body.dateEntered))) return res.status(400).json({ error: 'Enter a valid date entered.' });
+      if (!validMoveInDate(body.dateEntered)) return res.status(400).json({ error: 'Choose a valid move-in date that is today or later.' });
       if (await tenants.findOne({ houseNo: body.houseNo, status: 'accepted' })) return res.status(409).json({ error: `Room ${body.houseNo} is already occupied.` });
       if (await tenants.findOne({ idNumber: idNumber, status: { $in: ['pending', 'accepted'] } })) return res.status(409).json({ error: 'An active application already exists for this ID number.' });
       const tenant = { id: Date.now() * 1000 + Math.floor(Math.random() * 1000), name, idNumber, email, phone: phone.startsWith('0') ? '+254' + phone.slice(1) : phone, notificationPreferences: { payments: true, charges: true, account: true }, houseNo: body.houseNo, dateEntered: body.dateEntered, monthlyRent: expected, expected, paid: 0, feesTotal: 0, balance: expected, status: 'pending', paymentHistory: [], feeHistory: [], timestamp: new Date().toLocaleString(), createdAt: new Date() };
