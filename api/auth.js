@@ -124,7 +124,14 @@ module.exports = async (req, res) => {
         if (await verifyPassword(String(body.password || ''), candidate.passwordHash)) { matched = candidate; break; }
       }
       if (!matched) return res.status(401).json({ error: 'The phone number and password did not match an administrator account.' });
-      return res.status(200).json({ email: matched.email, message: `Your administrator login email is ${matched.email}.` });
+      if (matched.emailVerified !== true) {
+        try { assertEmailConfiguration(); } catch (error) { return res.status(503).json({ error: error.message }); }
+        const verification = createToken();
+        try { await sendAdminVerification(req, matched, verification.token); } catch (error) { console.error('SEGUTON recovery verification delivery failed:', error.message); return res.status(502).json({ error: 'Your account was found, but the verification email could not be delivered. Check the Resend sender/domain configuration.' }); }
+        await admins.updateOne({ _id: matched._id }, { $set: { emailVerificationTokenHash: verification.hash, emailVerificationExpiresAt: verification.expiresAt, updatedAt: new Date() } });
+        return res.status(200).json({ email: matched.email, verificationSent: true, message: `Your administrator email is ${matched.email}. A fresh verification email was sent automatically. Check Inbox, Promotions, and Spam.` });
+      }
+      return res.status(200).json({ email: matched.email, verificationSent: false, message: `Your administrator login email is ${matched.email}.` });
     }
 
     if (body.action === 'resend-verification') {
