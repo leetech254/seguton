@@ -63,6 +63,7 @@ button.submit{width:100%; margin-top:15px; padding:14px; border:none; border-rad
 .room-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px;}
 .room{padding:15px; border-radius:12px; text-align:center; font-weight:bold;}
 .room.available{background:#d4efdf; border:2px solid #27ae60; color:#145a32;}
+.room.reserved{background:#fff4cc; border:2px solid #e0ad00; color:#765900;}
 .room.occupied{background:#fadbd8; border:2px solid #e74c3c; color:#922b21;}
 table{width:100%; border-collapse:collapse; font-size:14px;}
 th,td{padding:10px; border-bottom:1px solid #eee; text-align:left;}
@@ -445,7 +446,7 @@ async function loadPublicRooms(){
     const data=await apiRequest('GET',undefined,'/api/data?view=rooms');
     rooms=data.rooms || [];
     const select=document.getElementById('houseNo');
-    const available=rooms.filter(room=>room.status!=='occupied');
+    const available=rooms.filter(room=>room.status==='available');
     select.innerHTML='<option value="">Select Room</option>'+available.map(room=>`<option value="${escapeHtml(room.id)}">${escapeHtml(room.id)} - Ksh ${Number(room.rent||0).toLocaleString()}</option>`).join('');
     select.disabled=available.length===0;
     document.getElementById('tenantSubmit').disabled=available.length===0;
@@ -840,7 +841,7 @@ document.getElementById('tenantForm').addEventListener('submit', async (e)=>{
     return;
   }
   const roomObj = rooms.find(r=>r.id===houseNo);
-  if(!roomObj || roomObj.status==='occupied'){ showToast('That room is no longer available. Refresh the room list and choose another room.'); setButtonBusy(submitButton,false); loadPublicRooms(); return; }
+  if(!roomObj || roomObj.status!=='available'){ showToast('That room is no longer available or is already reserved. Refresh the room list and choose another room.'); setButtonBusy(submitButton,false); loadPublicRooms(); return; }
 
   const expected = selectedRoomRent();
   const paid = parseFloat(document.getElementById('amountPaid').value);
@@ -916,7 +917,7 @@ document.getElementById('paymentForm').addEventListener('submit', async (e)=>{
 });
 function renderManagement(){
   const grid = document.getElementById('roomGrid');
-  grid.innerHTML = rooms.length ? rooms.map(r=>`<div class="room ${r.status}" role="button" tabindex="0" onclick="openRoomDetails('${escapeHtml(r.id)}')" onkeydown="if(event.key==='Enter'||event.key===' ')openRoomDetails('${escapeHtml(r.id)}')" aria-label="Open details for room ${escapeHtml(r.id)}">${escapeHtml(r.id)}<br><small>${escapeHtml(r.type)}</small><br>${r.status==='available'?'✅ Available':'👤 '+escapeHtml(r.tenant)}<br><small>Ksh ${Number(r.rent || rentPrices[r.id] || 0).toLocaleString()}</small></div>`).join('') : '<div class="empty-state">No rooms were returned by the database. Refresh after checking the database connection.</div>';
+  grid.innerHTML = rooms.length ? rooms.map(r=>`<div class="room ${r.status}" role="button" tabindex="0" onclick="openRoomDetails('${escapeHtml(r.id)}')" onkeydown="if(event.key==='Enter'||event.key===' ')openRoomDetails('${escapeHtml(r.id)}')" aria-label="Open details for room ${escapeHtml(r.id)}">${escapeHtml(r.id)}<br><small>${escapeHtml(r.type)}</small><br>${r.status==='available'?'✅ Available':r.status==='reserved'?'⏳ Reserved':'👤 '+escapeHtml(r.tenant)}<br><small>Ksh ${Number(r.rent || rentPrices[r.id] || 0).toLocaleString()}</small></div>`).join('') : '<div class="empty-state">No rooms were returned by the database. Refresh after checking the database connection.</div>';
   const avail = rooms.filter(r=>r.status==='available').length;
   const occ = rooms.filter(r=>r.status==='occupied').length;
   document.getElementById('totalRooms').innerText = rooms.length;
@@ -951,7 +952,7 @@ function openRoomDetails(roomId){
   document.getElementById('roomDetailTitle').innerText=`${room.id} · ${room.type}`;
   document.getElementById('roomDetailBody').innerHTML=`
     <div class="room-detail-grid">
-      <div class="room-detail-stat"><small>Status</small><strong>${room.status==='occupied'?'Occupied':'Available'}</strong></div>
+      <div class="room-detail-stat"><small>Status</small><strong>${room.status==='occupied'?'Occupied':room.status==='reserved'?'Reserved':'Available'}</strong></div>
       <div class="room-detail-stat"><small>Monthly rent</small><strong>Ksh ${Number(room.rent||rentPrices[room.id]||0).toLocaleString()}</strong></div>
       <div class="room-detail-stat"><small>Tenant</small><strong>${tenant?escapeHtml(tenant.name):'No tenant'}</strong></div>
       <div class="room-detail-stat"><small>Balance owed</small><strong>Ksh ${balance.toLocaleString()}</strong></div>

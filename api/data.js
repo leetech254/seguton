@@ -33,9 +33,10 @@ module.exports = async (req, res) => {
       const body = req.body || {};
       const required = ['name', 'idNumber', 'phone', 'houseNo', 'dateEntered', 'expected', 'paid'];
       if (required.some((field) => body[field] === undefined || body[field] === '')) return res.status(400).json({ error: 'All tenant fields are required.' });
-      if (!Object.prototype.hasOwnProperty.call(ROOM_DEFINITIONS, body.houseNo)) return res.status(400).json({ error: 'Unknown room.' });
+      const houseNo = String(body.houseNo || '').trim().toUpperCase();
+      if (!Object.prototype.hasOwnProperty.call(ROOM_DEFINITIONS, houseNo)) return res.status(400).json({ error: 'Select a valid room from the available room list.' });
       const submittedExpected = Number(body.expected); const paid = Number(body.paid);
-      const expected = Number(ROOM_DEFINITIONS[body.houseNo]);
+      const expected = Number(ROOM_DEFINITIONS[houseNo]);
       const idNumber = String(body.idNumber).trim();
       const name = String(body.name || '').trim();
       if (name.length < 2 || name.length > 120) return res.status(400).json({ error: 'Enter a valid full name.' });
@@ -47,9 +48,11 @@ module.exports = async (req, res) => {
       if (!Number.isFinite(submittedExpected) || submittedExpected !== expected || !Number.isFinite(paid) || paid < 0) return res.status(400).json({ error: 'The selected room rent is invalid. Refresh the room list and try again.' });
       if (paid !== 0) return res.status(400).json({ error: 'Registration payments must be completed through the M-Pesa payment prompt.' });
       if (!validMoveInDate(body.dateEntered)) return res.status(400).json({ error: 'Choose a valid move-in date that is today or later.' });
-      if (await tenants.findOne({ houseNo: body.houseNo, status: 'accepted' })) return res.status(409).json({ error: `Room ${body.houseNo} is already occupied.` });
+      const activeRoomApplication = await tenants.findOne({ houseNo, status: { $in: ['pending', 'accepted'] } }, { projection: { status: 1 } });
+      if (activeRoomApplication?.status === 'accepted') return res.status(409).json({ error: `Room ${houseNo} is already occupied. Refresh the room list and choose another room.` });
+      if (activeRoomApplication?.status === 'pending') return res.status(409).json({ error: `Room ${houseNo} is reserved by a pending application. Refresh the room list and choose another room.` });
       if (await tenants.findOne({ idNumber: idNumber, status: { $in: ['pending', 'accepted'] } })) return res.status(409).json({ error: 'An active application already exists for this ID number.' });
-      const tenant = { id: Date.now() * 1000 + Math.floor(Math.random() * 1000), name, idNumber, email, phone: phone.startsWith('0') ? '+254' + phone.slice(1) : phone, notificationPreferences: { payments: true, charges: true, account: true }, houseNo: body.houseNo, dateEntered: body.dateEntered, monthlyRent: expected, expected, paid: 0, feesTotal: 0, balance: expected, status: 'pending', paymentHistory: [], feeHistory: [], timestamp: new Date().toLocaleString(), createdAt: new Date() };
+      const tenant = { id: Date.now() * 1000 + Math.floor(Math.random() * 1000), name, idNumber, email, phone: phone.startsWith('0') ? '+254' + phone.slice(1) : phone, notificationPreferences: { payments: true, charges: true, account: true }, houseNo, dateEntered: body.dateEntered, monthlyRent: expected, expected, paid: 0, feesTotal: 0, balance: expected, status: 'pending', paymentHistory: [], feeHistory: [], timestamp: new Date().toLocaleString(), createdAt: new Date() };
       await tenants.insertOne(tenant);
       await notifyAdmins(db, { title: 'New tenant application', details: `${tenant.name} applied for room ${tenant.houseNo}. Tenant email: ${email || 'not provided'}.` });
       return res.status(201).json({ tenant: cleanTenant(tenant), emailNotificationsEnabled: Boolean(email) });
@@ -138,7 +141,17 @@ module.exports = async (req, res) => {
         const amount = paymentAmount !== undefined ? Number(paymentAmount) : Number(paid) - Number(tenant.paid || 0);
         operation.$push = { paymentHistory: { amount, totalPaid: nextPaid, date: new Date().toISOString(), source: 'Management' } };
       }
-      await tenants.updateOne({ id: Number(id) }, operation);
+      try {
+        await tenants.updateOne({ id: Number(id) }, operation);
+      } catch (error) {
+        if (error?.code === 11000 && status === 'accepted') return res.status(409).json({ error: `Room ${tenant.houseNo} was just occupied by another application. Refresh the dashboard.` });
+        throw error;
+      }
+      let autoDeclined = 0;
+      if (status === 'accepted') {
+        const competing = await tenants.updateMany({ houseNo: tenant.houseNo, status: 'pending', id: { $ne: Number(id) } }, { $set: { status: 'declined', updatedAt: new Date(), declineReason: 'Room was assigned to another application.' } });
+        autoDeclined = competing.modifiedCount;
+      }
       const updatedTenant = await tenants.findOne({ id: Number(id) });
       if (paymentAmount !== undefined || (paid !== undefined && Number(paid) > Number(tenant.paid || 0))) {
         const amount = paymentAmount !== undefined ? Number(paymentAmount) : Number(paid) - Number(tenant.paid || 0);
@@ -152,7 +165,7 @@ module.exports = async (req, res) => {
           notifyAdmins(db, { title: `Tenant application ${status}`, details: `${tenant.name}'s application for ${tenant.houseNo} was marked ${status}.` })
         ]);
       }
-      return res.status(200).json({ ok: true });
+      return res.status(200).json({ ok: true, autoDeclined });
     }
 
     return res.status(405).json({ error: 'Method not allowed.' });
