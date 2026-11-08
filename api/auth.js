@@ -83,7 +83,8 @@ module.exports = async (req, res) => {
         if (!admin) { res.status(400).setHeader('Cache-Control', 'no-store').setHeader('Referrer-Policy', 'no-referrer').setHeader('Content-Type', 'text/html').end(htmlMessage('Reset link expired', 'Request another password reset link from the management login page.')); return; }
         res.status(200).setHeader('Cache-Control', 'no-store').setHeader('Referrer-Policy', 'no-referrer').setHeader('Content-Type', 'text/html').end(htmlMessage('Reset link ready', 'Return to SEGUTON, enter the reset token from this link if the app requests it, and choose a new password.')); return;
       }
-      return res.status(200).json({ setupRequired: adminCount === 0, authenticated: Boolean(session), user: session ? { email: session.email } : null });
+      const sessionAdmin = session ? await admins.findOne({ email: session.email }, { projection: { email: 1, phone: 1, createdAt: 1, emailVerified: 1 } }) : null;
+      return res.status(200).json({ setupRequired: adminCount === 0, authenticated: Boolean(session && sessionAdmin), user: sessionAdmin ? publicAdmin(sessionAdmin) : null });
     }
 
     const body = req.body || {};
@@ -111,6 +112,19 @@ module.exports = async (req, res) => {
       if (admin.emailVerified !== true) return res.status(403).json({ error: 'Verify your administrator email before signing in.', verificationRequired: true });
       clearRateLimit(loginKey);
       setSession(res, admin); return res.status(200).json({ user: publicAdmin(admin) });
+    }
+
+    if (body.action === 'recover-email') {
+      const phone = normalizePhone(body.phone);
+      const recoveryLimit = consumeRateLimit(rateLimitKey(req, 'admin-recover-email', phone || body.phone), 5, 15 * 60 * 1000);
+      if (!recoveryLimit.allowed) return res.status(429).setHeader('Retry-After', recoveryLimit.retryAfter).json({ error: 'Too many recovery attempts. Try again later.' });
+      const candidates = phone ? await admins.find({ phone }).toArray() : [];
+      let matched = null;
+      for (const candidate of candidates) {
+        if (await verifyPassword(String(body.password || ''), candidate.passwordHash)) { matched = candidate; break; }
+      }
+      if (!matched) return res.status(401).json({ error: 'The phone number and password did not match an administrator account.' });
+      return res.status(200).json({ email: matched.email, message: `Your administrator login email is ${matched.email}.` });
     }
 
     if (body.action === 'resend-verification') {

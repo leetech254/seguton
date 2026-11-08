@@ -18,6 +18,7 @@ A browser-based rental and tenant management system.
 - Login-first management entry: the setup form appears only when the server confirms that no administrator exists
 - Settings can add verified secondary administrator logins without replacing the primary account
 - Secure management login with HTTP-only sessions and hashed passwords
+- Login help can recover the administrator email only after matching the administrator phone number and password; the signed-in email is also shown in Settings
 - Settings tab for changing the administrator password
 - Password-confirmed administrator account deletion with explicit `DELETE` confirmation; tenant and room records are preserved
 - Non-blocking toast notifications for API errors, validation failures, authentication, payments, and successful actions
@@ -79,7 +80,7 @@ The deployment runtime must use Node.js 20.19 or newer because the application u
 - `PATCH /api/data` with `{ "id": 123, "action": "add-fee", "feeCategory": "Water", "feeAmount": 500, "feeDescription": "October water bill" }` — admin-only fee assessment and balance update
 - Monthly rent generation and fee assessment automatically attempt to notify the tenant by SMS and/or email with the charge amount, room, and updated balance
 - Successful STK Push payments send a receipt/update to the tenant email when provided and an administrator alert through Resend; administrator alerts also cover new applications, manual payments, fees, rent generation, status changes, and tenant deletion
-- `/api/auth` — administrator setup with email verification, login, resend verification, logout, session status, password changes, forgot-password, one-time password reset links, confirmed email changes, and verified secondary-admin creation
+- `/api/auth` — administrator setup with email verification, login, forgotten-email recovery, resend verification, logout, session status, password changes, forgot-password, one-time password reset links, confirmed email changes, and verified secondary-admin creation
 - `POST /api/tenant` — verifies tenant name, 8-digit ID, and phone and returns applications, rent charges, fee history, payment history, email, and balance
 - `PATCH /api/tenant` — verifies the current tenant details and updates the tenant email, phone number, and payment/charge/account email preferences
 - `POST /api/stkpush` — sends an STK prompt for an outstanding tenant balance; payment is not credited until LeeTec confirms success

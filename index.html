@@ -273,7 +273,8 @@ body.tenant-portal-mode .nav{display:none}body.tenant-portal-mode{background:#ee
         <label>Password</label><input type="password" id="loginPassword" required autocomplete="current-password" placeholder="Your password">
         <button id="loginSubmit" type="submit" class="submit">Sign in</button>
       </form>
-      <div class="auth-links"><button type="button" class="muted-link" onclick="showForgotPassword()">Forgot password?</button><button type="button" class="muted-link" onclick="showResendVerification()">Resend verification</button></div>
+      <div class="auth-links"><button type="button" class="muted-link" onclick="showForgotEmail()">Forgot email?</button><button type="button" class="muted-link" onclick="showForgotPassword()">Forgot password?</button><button type="button" class="muted-link" onclick="showResendVerification()">Resend verification</button></div>
+      <div id="forgotEmailView" class="auth-recovery" style="display:none"><h3>Find administrator email</h3><p class="field-help">Enter the phone number and password belonging to your administrator account. Both are required for security.</p><form id="forgotEmailForm"><label>Administrator phone number</label><input type="tel" id="forgotAdminPhone" required autocomplete="tel" placeholder="+254 700 000 000"><label>Administrator password</label><input type="password" id="forgotAdminPassword" required autocomplete="current-password"><button type="submit" class="submit">Find my email</button></form><p class="field-help">If you do not remember the password, use Forgot password or check your Resend delivery logs and database administrator record.</p><button type="button" class="muted-link" onclick="hideRecoveryViews()">Back to login</button></div>
       <div id="forgotPasswordView" class="auth-recovery" style="display:none"><h3>Reset administrator password</h3><p class="field-help">Enter your administrator email. If your account exists, an email with a one-time reset link will be sent.</p><form id="forgotPasswordForm"><label>Email</label><input type="email" id="forgotEmail" required autocomplete="email"><button type="submit" class="submit">Send reset link</button></form><button type="button" class="muted-link" onclick="hideRecoveryViews()">Back to login</button></div>
       <div id="resendVerificationView" class="auth-recovery" style="display:none"><h3>Verify administrator email</h3><p class="field-help">Send a fresh verification email. Use the same address from administrator setup, then check Inbox, Promotions, and Spam.</p><form id="resendVerificationForm"><label>Email</label><input type="email" id="resendEmail" required autocomplete="email"><button type="submit" class="submit">Send verification email</button></form><button type="button" class="muted-link" onclick="hideRecoveryViews()">Back to login</button></div>
       <div id="resetPasswordView" class="auth-recovery" style="display:none"><h3>Choose a new password</h3><form id="resetPasswordForm"><label>New password</label><input type="password" id="resetPassword" required minlength="8" autocomplete="new-password"><label>Confirm new password</label><input type="password" id="resetPasswordConfirm" required minlength="8" autocomplete="new-password"><button type="submit" class="submit">Reset password</button></form></div>
@@ -316,7 +317,9 @@ body.tenant-portal-mode .nav{display:none}body.tenant-portal-mode{background:#ee
     </div>
     <div id="settingsPanel" class="panel settings-panel" data-admin-tab="settings" style="display:none">
       <h2>Settings</h2>
-      <p class="sub">Change the administrator password. Your email and phone remain stored securely in the database.</p>
+      <p class="sub">Manage your administrator login, email, and secondary accounts.</p>
+      <div class="application-summary" style="margin-bottom:18px"><div><span>Current login email</span><strong id="currentAdminEmail">Loading…</strong></div><div><span>Current phone</span><strong id="currentAdminPhone">Stored securely</strong></div></div>
+      <p class="sub">Change the administrator password. Your current login remains active while you update account settings.</p>
       <form id="passwordForm">
         <label>Current password</label><input type="password" id="currentPassword" required autocomplete="current-password">
         <label>New password</label><input type="password" id="newPassword" required minlength="8" autocomplete="new-password">
@@ -589,9 +592,10 @@ function showAuthMode(setupRequired){
   setAuthMessage('');
 }
 function hideRecoveryViews(){
-  ['forgotPasswordView','resendVerificationView','resetPasswordView'].forEach(id=>{const node=document.getElementById(id);if(node)node.style.display='none';});
+  ['forgotEmailView','forgotPasswordView','resendVerificationView','resetPasswordView'].forEach(id=>{const node=document.getElementById(id);if(node)node.style.display='none';});
   const login=document.getElementById('loginForm'); if(login) login.style.display='block';
 }
+function showForgotEmail(){ hideRecoveryViews(); document.getElementById('loginForm').style.display='none'; document.getElementById('forgotEmailView').style.display='block'; }
 function showForgotPassword(){ hideRecoveryViews(); document.getElementById('loginForm').style.display='none'; document.getElementById('forgotPasswordView').style.display='block'; }
 function showResendVerification(){ hideRecoveryViews(); document.getElementById('loginForm').style.display='none'; document.getElementById('resendVerificationView').style.display='block'; }
 function showResetPassword(token){ hideRecoveryViews(); document.getElementById('loginForm').style.display='none'; document.getElementById('resetPasswordView').style.display='block'; document.getElementById('resetPasswordView').dataset.token=token; setAuthMessage('Choose a new administrator password.'); }
@@ -618,6 +622,8 @@ async function openManagement(){
     const auth=await authRequest('GET');
     if(auth.authenticated){
       document.getElementById('adminIdentity').innerText='Administrator • '+auth.user.email;
+      document.getElementById('currentAdminEmail').innerText=auth.user.email || 'Not available';
+      document.getElementById('currentAdminPhone').innerText=auth.user.phone || 'Stored securely';
       showPage('managePage');
       setAdminTab('overview');
       knownMpesaPayments = new Set();
@@ -787,6 +793,11 @@ document.getElementById('loginForm').addEventListener('submit', async (e)=>{
   try{ await authRequest('POST',{action:'login',email:document.getElementById('loginEmail').value,password:document.getElementById('loginPassword').value}); setAuthMessage('Welcome back. Loading management…','#198754'); setTimeout(openManagement,250); }
   catch(error){ setAuthMessage(error.message); }
   finally{ setButtonBusy(button,false); }
+});
+document.getElementById('forgotEmailForm').addEventListener('submit', async (e)=>{
+  e.preventDefault(); const button=e.target.querySelector('button'); setButtonBusy(button,true,'Checking…');
+  try{ const result=await authRequest('POST',{action:'recover-email',phone:document.getElementById('forgotAdminPhone').value,password:document.getElementById('forgotAdminPassword').value}); document.getElementById('loginEmail').value=result.email; setAuthMessage(result.message,'#198754'); hideRecoveryViews(); }
+  catch(error){ setAuthMessage(error.message); } finally{ setButtonBusy(button,false); }
 });
 document.getElementById('forgotPasswordForm').addEventListener('submit', async (e)=>{
   e.preventDefault(); const button=e.target.querySelector('button'); setButtonBusy(button,true,'Sending…');
@@ -1111,6 +1122,8 @@ async function restorePersistentSession(){
     const auth=await authRequest('GET');
     if(auth.authenticated){
       document.getElementById('adminIdentity').innerText='Administrator • '+auth.user.email;
+      document.getElementById('currentAdminEmail').innerText=auth.user.email || 'Not available';
+      document.getElementById('currentAdminPhone').innerText=auth.user.phone || 'Stored securely';
       showPage('managePage');
       setAdminTab('overview');
       knownMpesaPayments = new Set();
