@@ -262,7 +262,7 @@ body.tenant-portal-mode .nav{display:none}body.tenant-portal-mode{background:#ee
         <label>Password</label><input type="password" id="setupPassword" required minlength="8" autocomplete="new-password" placeholder="At least 8 characters">
         <button id="setupSubmit" type="submit" class="submit">Create administrator account</button>
       </form>
-      <p class="field-help auth-note">A verification link will be sent to this email before the first login.</p>
+      <p class="field-help auth-note">A branded verification email will be sent immediately. Check Inbox, Promotions, and Spam; the link expires in 30 minutes.</p>
     </div>
     <div id="loginView" style="display:none">
       <h1>Management Login</h1>
@@ -274,7 +274,7 @@ body.tenant-portal-mode .nav{display:none}body.tenant-portal-mode{background:#ee
       </form>
       <div class="auth-links"><button type="button" class="muted-link" onclick="showForgotPassword()">Forgot password?</button><button type="button" class="muted-link" onclick="showResendVerification()">Resend verification</button></div>
       <div id="forgotPasswordView" class="auth-recovery" style="display:none"><h3>Reset administrator password</h3><p class="field-help">Enter your administrator email. If your account exists, an email with a one-time reset link will be sent.</p><form id="forgotPasswordForm"><label>Email</label><input type="email" id="forgotEmail" required autocomplete="email"><button type="submit" class="submit">Send reset link</button></form><button type="button" class="muted-link" onclick="hideRecoveryViews()">Back to login</button></div>
-      <div id="resendVerificationView" class="auth-recovery" style="display:none"><h3>Email update</h3><p class="field-help">Send a new administrator email verification link.</p><form id="resendVerificationForm"><label>Email</label><input type="email" id="resendEmail" required autocomplete="email"><button type="submit" class="submit">Send email update</button></form><button type="button" class="muted-link" onclick="hideRecoveryViews()">Back to login</button></div>
+      <div id="resendVerificationView" class="auth-recovery" style="display:none"><h3>Verify administrator email</h3><p class="field-help">Send a fresh verification email. Use the same address from administrator setup, then check Inbox, Promotions, and Spam.</p><form id="resendVerificationForm"><label>Email</label><input type="email" id="resendEmail" required autocomplete="email"><button type="submit" class="submit">Send verification email</button></form><button type="button" class="muted-link" onclick="hideRecoveryViews()">Back to login</button></div>
       <div id="resetPasswordView" class="auth-recovery" style="display:none"><h3>Choose a new password</h3><form id="resetPasswordForm"><label>New password</label><input type="password" id="resetPassword" required minlength="8" autocomplete="new-password"><label>Confirm new password</label><input type="password" id="resetPasswordConfirm" required minlength="8" autocomplete="new-password"><button type="submit" class="submit">Reset password</button></form></div>
       <button class="muted-link" onclick="showPage('tenantPage')">Back to tenant registration</button>
     </div>
