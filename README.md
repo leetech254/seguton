@@ -25,6 +25,7 @@ A browser-based rental and tenant management system.
 - Faster first paint with deferred reporting-library loading, request loading states, disabled duplicate-submit protection, and accessible active navigation
 - Tenant registration collects normalized Kenyan phone numbers, validates the 8-digit Kenyan National ID format, auto-fills the rent due, and only shows available rooms
 - Room availability is validated server-side with canonical room IDs; pending applications reserve a room, accepted rooms are protected by a unique database constraint, and competing pending applications are closed when one application is accepted
+- Administrator approve/decline actions require confirmation, prevent duplicate clicks and stale transitions, show clear results, and refresh tenant and room navigation automatically
 - Tenant Portal login using name, National ID, and phone number shows applications, payment history, total paid, and live balance
 - Tenant Portal dropdown dashboard with Summary, Pay rent, Charges, Full history, and Contact & updates tabs; tenants can update their email and phone number for future notifications and payment prompts
 - Tenant Portal now uses a dedicated responsive sidebar dashboard with grouped Account, Records, and Account Settings navigation; mobile users get a drawer menu with balance badges and quick refresh/logout actions

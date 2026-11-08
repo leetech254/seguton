@@ -70,7 +70,7 @@ th,td{padding:10px; border-bottom:1px solid #eee; text-align:left;}
 th{background:#2c3e50; color:white; position:sticky; top:0;}
 .badge{padding:4px 10px; border-radius:15px; font-size:12px; color:white;}
 .pending{background:#f39c12;}.accepted{background:#27ae60;}.declined{background:#e74c3c;}
-.btn-small{padding:6px 10px; border:none; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; margin:2px;}
+.btn-small{padding:6px 10px; border:none; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; margin:2px;}.btn-small:disabled{opacity:.55; cursor:wait;}
 .btn-accept{background:#27ae60; color:white;}.btn-decline{background:#e74c3c; color:white;}
 .btn-report{background:#f1c40f; color:#000; padding:10px 18px; border:none; border-radius:8px; font-weight:bold; cursor:pointer;}
 .status-msg{text-align:center; margin-top:10px; font-weight:bold;}
@@ -930,6 +930,10 @@ function escapeHtml(value){
   return String(value ?? '').replace(/[&<>\"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[character]));
 }
 let paymentTenantId = null;
+const tenantActionBusy = new Set();
+function setTenantActionBusy(id, busy){
+  document.querySelectorAll(`[data-tenant-action="${Number(id)}"]`).forEach(button=>{ button.disabled=busy; button.setAttribute('aria-busy',String(busy)); });
+}
 function recordPayment(id){
   const tenant = tenants.find(t=>t.id===id);
   if(!tenant) return;
@@ -973,7 +977,7 @@ function renderManagement(){
     <td>${escapeHtml(t.name)}</td><td>${escapeHtml(t.idNumber)}</td><td>${escapeHtml(t.phone || '-')}</td><td>${escapeHtml(t.email || '-')}</td><td>${escapeHtml(t.houseNo)}</td><td>${escapeHtml(t.dateEntered)}</td>
     <td>${Number(t.expected||0).toLocaleString()}</td><td>${Number(t.feesTotal||0).toLocaleString()}</td><td>${Number(t.paid||0).toLocaleString()}</td><td style="color:${t.balance>0?'red':'green'}">${Number(t.balance||0).toLocaleString()}</td>
     <td><span class="badge ${t.status}">${t.status}</span></td>
-    <td>${t.status==='pending'?`<button class="btn-small btn-accept" onclick="approveTenant(${t.id})">Accept</button><button class="btn-small btn-decline" onclick="declineTenant(${t.id})">Decline</button>`:t.status==='accepted'?`<button class="btn-small btn-payment" onclick="recordPayment(${t.id})">Record payment</button><button class="btn-small" onclick="openFeePanel(${t.id})">Add fee</button>`:'-'}${Number(t.paid||0)>0 || (t.paymentHistory||[]).length?`<button class="btn-small btn-decline" onclick="deletePaymentHistory(${t.id})">Delete payment history</button>`:''}<button class="btn-small btn-decline" onclick="deleteTenant(${t.id})">Delete tenant</button></td>
+    <td>${t.status==='pending'?`<button class="btn-small btn-accept" data-tenant-action="${t.id}" onclick="approveTenant(${t.id})">Accept</button><button class="btn-small btn-decline" data-tenant-action="${t.id}" onclick="declineTenant(${t.id})">Decline</button>`:t.status==='accepted'?`<button class="btn-small btn-payment" onclick="recordPayment(${t.id})">Record payment</button><button class="btn-small" onclick="openFeePanel(${t.id})">Add fee</button>`:'-'}${Number(t.paid||0)>0 || (t.paymentHistory||[]).length?`<button class="btn-small btn-decline" onclick="deletePaymentHistory(${t.id})">Delete payment history</button>`:''}<button class="btn-small btn-decline" onclick="deleteTenant(${t.id})">Delete tenant</button></td>
   </tr>`).join('') : '<tr><td colspan="12" class="empty-state">No database records match your filters.</td></tr>';
 }
 function closeRoomDetails(){ document.getElementById('roomDetailPanel').style.display='none'; document.getElementById('roomDetailBody').innerHTML=''; }
@@ -993,7 +997,7 @@ function openRoomDetails(roomId){
       <div class="room-detail-stat"><small>Balance owed</small><strong>Ksh ${balance.toLocaleString()}</strong></div>
     </div>
     ${tenant?`<div class="room-detail-empty" style="margin-top:12px"><strong>${accepted?'Accepted tenant':'Pending application'}</strong><br>${escapeHtml(tenant.phone||'No phone')} · ID ${escapeHtml(tenant.idNumber||'-')}<br>Expected Ksh ${Number(tenant.expected||0).toLocaleString()} · Paid Ksh ${Number(tenant.paid||0).toLocaleString()}${pending.length>1?`<br>${pending.length-1} more pending application(s) for this room`:''}</div>`:'<div class="room-detail-empty">This room is available for new tenant applications.</div>'}
-    <div class="room-detail-actions">${accepted?`<button class="btn-small btn-payment" onclick="recordPayment(${accepted.id})">Record payment</button><button class="btn-small" onclick="openFeePanel(${accepted.id})">Add fee or penalty</button><button class="btn-small btn-decline" onclick="deleteTenant(${accepted.id})">Delete tenant & release room</button>`:pending.length?`<button class="btn-small btn-accept" onclick="approveTenant(${pending[0].id})">Approve application</button><button class="btn-small btn-decline" onclick="declineTenant(${pending[0].id})">Decline application</button>`:'<button class="btn-small" onclick="showPage(\'tenantPage\');document.getElementById(\'houseNo\').value=\''+escapeHtml(room.id)+'\';updateRent()">Open tenant registration</button>'}</div>`;
+    <div class="room-detail-actions">${accepted?`<button class="btn-small btn-payment" onclick="recordPayment(${accepted.id})">Record payment</button><button class="btn-small" onclick="openFeePanel(${accepted.id})">Add fee or penalty</button><button class="btn-small btn-decline" onclick="deleteTenant(${accepted.id})">Delete tenant & release room</button>`:pending.length?`<button class="btn-small btn-accept" data-tenant-action="${pending[0].id}" onclick="approveTenant(${pending[0].id})">Approve application</button><button class="btn-small btn-decline" data-tenant-action="${pending[0].id}" onclick="declineTenant(${pending[0].id})">Decline application</button>`:'<button class="btn-small" onclick="showPage(\'tenantPage\');document.getElementById(\'houseNo\').value=\''+escapeHtml(room.id)+'\';updateRent()">Open tenant registration</button>'}</div>`;
   const panel=document.getElementById('roomDetailPanel'); panel.style.display='block'; panel.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
@@ -1014,29 +1018,41 @@ async function generateMonthlyRent(){
 async function approveTenant(id){
   const t = tenants.find(x=>x.id===id);
   if(!t) return;
+  if(t.status!=='pending'){ showToast(`This application is already ${t.status}. Refresh the dashboard.`,'info'); await syncFromDatabase(); return; }
   const room = rooms.find(r=>r.id===t.houseNo);
   if(!room){ showToast('Room data is not loaded from the database. Refresh and try again.'); return; }
   if(room.status==='occupied'){ showToast('Room already occupied.'); return; }
+  if(tenantActionBusy.has(id)) return;
+  if(!confirm(`Approve ${t.name}'s application for room ${t.houseNo}? This will reserve the room for this tenant and close any competing pending application.`)) return;
+  tenantActionBusy.add(id); setTenantActionBusy(id,true);
   try{
-    await apiRequest('PATCH', {id, status:'accepted'});
-    const latest = await apiRequest('GET');
-    tenants = latest.tenants || tenants;
-    rooms = latest.rooms || rooms;
+    const result=await apiRequest('PATCH', {id, status:'accepted'});
+    showToast(result.autoDeclined ? `Application approved. ${result.autoDeclined} competing application${result.autoDeclined===1?'':'s'} closed.` : 'Application approved and room assigned.','success',7000);
+    await syncFromDatabase(); setAdminTab('tenants'); closeRoomDetails();
   }catch(error){
-    showToast(error.message);
+    showToast(`Approval not completed: ${error.message}`);
+    await syncFromDatabase();
+  }finally{
+    tenantActionBusy.delete(id); setTenantActionBusy(id,false); renderManagement();
   }
-  renderManagement();
 }
 async function declineTenant(id){
+  const t=tenants.find(x=>x.id===id);
+  if(!t) return;
+  if(t.status!=='pending'){ showToast(`This application is already ${t.status}. Refresh the dashboard.`,'info'); await syncFromDatabase(); return; }
+  if(tenantActionBusy.has(id)) return;
+  if(!confirm(`Decline ${t.name}'s application for room ${t.houseNo}? The application will be closed and the room will become available.`)) return;
+  tenantActionBusy.add(id); setTenantActionBusy(id,true);
   try{
-    await apiRequest('PATCH', {id, status:'declined'});
-    const latest = await apiRequest('GET');
-    tenants = latest.tenants || tenants;
-    rooms = latest.rooms || rooms;
+    const result=await apiRequest('PATCH', {id, status:'declined'});
+    showToast(result.message || 'Application declined. The room is available again.','success',7000);
+    await syncFromDatabase(); setAdminTab('tenants'); closeRoomDetails();
   }catch(error){
-    showToast(error.message);
+    showToast(`Decline not completed: ${error.message}`);
+    await syncFromDatabase();
+  }finally{
+    tenantActionBusy.delete(id); setTenantActionBusy(id,false); renderManagement();
   }
-  renderManagement();
 }
 async function deleteTenant(id){
   const tenant=tenants.find(t=>t.id===id);

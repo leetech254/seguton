@@ -99,6 +99,7 @@ module.exports = async (req, res) => {
       if (paymentAmount !== undefined && (!Number.isFinite(Number(paymentAmount)) || Number(paymentAmount) <= 0)) return res.status(400).json({ error: 'Payment amount must be greater than zero.' });
       const tenant = await tenants.findOne({ id: Number(id) });
       if (!tenant) return res.status(404).json({ error: 'Tenant not found.' });
+      if (status !== undefined && tenant.status !== 'pending') return res.status(409).json({ error: `This application is already ${tenant.status}. Refresh the dashboard before taking another action.` });
       const outstandingBalance = Math.max(0, Number(tenant.expected || 0) - Number(tenant.paid || 0));
       if (paymentAmount !== undefined && Number(paymentAmount) > outstandingBalance) return res.status(400).json({ error: `Payment cannot exceed the current balance of Ksh ${outstandingBalance.toLocaleString()}.` });
       if (paid !== undefined && Number(paid) > Number(tenant.expected || 0)) return res.status(400).json({ error: 'Total paid cannot exceed the tenant’s expected charges.' });
@@ -165,7 +166,7 @@ module.exports = async (req, res) => {
           notifyAdmins(db, { title: `Tenant application ${status}`, details: `${tenant.name}'s application for ${tenant.houseNo} was marked ${status}.` })
         ]);
       }
-      return res.status(200).json({ ok: true, autoDeclined });
+      return res.status(200).json({ ok: true, autoDeclined, message: status === 'accepted' ? `${tenant.name}'s application was approved and room ${tenant.houseNo} was assigned.` : `${tenant.name}'s application was declined and room ${tenant.houseNo} was released.` });
     }
 
     return res.status(405).json({ error: 'Method not allowed.' });
