@@ -1,0 +1,9 @@
+{
+  "name": "SEGUTON Estate",
+  "short_name": "SEGUTON",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#243447",
+  "theme_color": "#2c3e50",
+  "description": "SEGUTON rental and tenant management portal"
+}

@@ -34,7 +34,7 @@ A browser-based rental and tenant management system.
 - Admin tenant deletion permanently removes the application, payment, fee, and personal details after typed `DELETE TENANT` confirmation; the tenant's room is immediately available again
 - Admin monthly rent generation adds one base-rent charge per accepted tenant, updates balances, and prevents duplicate charges for the same month
 - Admin fee management for Water, Electricity, Service charge, Garbage collection, Penalty, and custom fees with descriptions, tenant-visible charge history, balance updates, and Excel reporting
-- Tenant Portal STK Push payments through CourtneyTech with server-side credentials and confirmed-payment callbacks; successful registration opens this payment flow instead of the admin dashboard
+- Tenant Portal STK Push payments through LeeTec with server-side credentials, idempotent request IDs, and transaction-status reconciliation; signed webhooks are optional
 - Admin dashboard live polling with toast and banner notifications for confirmed M-Pesa payments, including amount, room, and receipt
 - Automated tenant notifications when monthly rent or a utility fee is generated, using optional email and/or SMS delivery
 - Optional tenant email field for payment receipts, fees, application status changes, and other account updates; administrators receive Resend alerts for new applications, payments, fees, rent generation, status changes, and deletions
@@ -47,12 +47,9 @@ A browser-based rental and tenant management system.
    - `MONGODB_URI`: MongoDB Atlas connection string
    - `MONGODB_DB`: database name, for example `seguton`
    - `SESSION_SECRET`: a random secret of at least 32 characters for secure administrator sessions
-   - `COURTNEY_API_KEY`: CourtneyTech API key
-   - `COURTNEY_API_SECRET`: CourtneyTech API secret; never expose this in browser code
-   - `COURTNEY_ACCOUNT_ID`: `payment_account_id` from CourtneyTech `GET /v2/accounts`
-   - `COURTNEY_BASE_URL`: `https://courtneytech.xyz/api`
-   - `COURTNEY_CALLBACK_BASE_URL`: your public Vercel URL, for example `https://seguton.vercel.app`
-   - `COURTNEY_CALLBACK_SECRET`: a random callback secret used to protect payment confirmations
+   - `LEETEC_API_KEY`: LeeTec API key; keep it server-side and never expose it in browser code
+   - `LEETEC_BASE_URL`: `https://leetec.online`
+   - `LEETEC_WEBHOOK_SECRET`: optional secret from the LeeTec signed merchant webhook configuration; omit it to use status polling
    - `RESEND_API_KEY`: optional Resend API key for tenant notifications and administrator alerts
    - `NOTIFICATION_FROM_EMAIL`: verified Resend sender, for example `SEGUTON <notifications@example.com>`
    - `APP_URL`: public Vercel URL used in administrator verification and password-reset links, for example `https://seguton.vercel.app`
@@ -61,7 +58,7 @@ A browser-based rental and tenant management system.
    - `AT_SENDER_ID`: optional approved SMS sender ID
 
    The primary variable name must be exactly `MONGODB_URI`. The API also accepts `MONGODB_URL` and `MONGO_URI` for compatibility, but `MONGODB_URI` is recommended. Environment variables must be enabled for Production, and the project must be redeployed after changes.
-4. Deploy. The static app is served from `index.html`; `/api/data`, `/api/tenant`, `/api/stkpush`, and `/api/stk-callback` are serverless endpoints. Do not add a catch-all rewrite in the Vercel dashboard; Vercel natively routes the root `api/` directory to Functions. On the first successful request, it creates/updates the `rooms` collection with all 14 rooms.
+4. Deploy. The static app is served from `index.html`; `/api/data`, `/api/tenant`, `/api/stkpush`, `/api/stk-status`, and the optional `/api/stk-callback` are serverless endpoints. Do not add a catch-all rewrite in the Vercel dashboard; Vercel natively routes the root `api/` directory to Functions. On the first successful request, it creates/updates the `rooms` collection with all 14 rooms.
 
 The app requires the API and database environment variables. If the database is unavailable, the UI shows an error and does not save data locally. Notification delivery is optional and never prevents a rent or fee update from being saved; configure either Resend, Africa's Talking, or both. Tenant emails are used directly when provided; no email verification step is required.
 
@@ -80,10 +77,11 @@ The app requires the API and database environment variables. If the database is 
 - `/api/auth` — one-time administrator setup with email verification, login, resend verification, logout, session status, password changes, forgot-password, and one-time password reset links
 - `POST /api/tenant` — verifies tenant name, 8-digit ID, and phone and returns applications, rent charges, fee history, payment history, email, and balance
 - `PATCH /api/tenant` — verifies the current tenant details and updates the tenant email, phone number, and payment/charge/account email preferences
-- `POST /api/stkpush` — sends an STK prompt for an outstanding tenant balance; payment is not credited until the provider callback confirms success
-- `POST /api/stk-callback` — receives CourtneyTech payment results and records successful M-Pesa payments
+- `POST /api/stkpush` — sends an STK prompt for an outstanding tenant balance; payment is not credited until LeeTec confirms success
+- `POST /api/stk-status` — checks LeeTec transaction status and records a reconciled `SUCCESS` payment
+- `POST /api/stk-callback` — optional signed LeeTec webhook path; records only reconciled `payment.success` / `SUCCESS` payments
 - `GET /api/data?view=rooms` — public room catalog for tenant registration; tenant records require administrator login
 
-Never commit `MONGODB_URI` or other secrets to the repository.
+Never commit `MONGODB_URI`, `LEETEC_API_KEY`, `LEETEC_WEBHOOK_SECRET`, or other secrets to the repository. The normal deployment only needs `LEETEC_API_KEY` and `LEETEC_BASE_URL`; after an STK prompt, the tenant portal polls `/api/stk-status` and credits the account only after LeeTec returns final status `SUCCESS`. You may optionally configure a LeeTec merchant webhook at `https://your-domain.vercel.app/api/stk-callback` for faster server-to-server updates.
 
 Administrator setup requires `RESEND_API_KEY`. The first administrator must open the emailed verification link before signing in. Password reset links expire after 30 minutes, are stored only as hashes, and can be used once. Password recovery responses are intentionally generic so they do not reveal whether an administrator email exists.

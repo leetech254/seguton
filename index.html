@@ -502,8 +502,21 @@ async function startTenantStkPayment(tenantId){
     const payload=await response.json().catch(()=>({error:'M-Pesa payment request returned an invalid response.'}));
     if(!response.ok) throw new Error(payload.error||'Unable to send STK prompt.');
     showToast(payload.message||'M-Pesa prompt sent. Check your phone and enter your PIN.','success');
-    setTimeout(refreshTenantPortal,15000);
+    if(payload.requestId) pollLeeTecPayment(payload.requestId, tenantId);
   }catch(error){ showToast(error.message); }
+}
+async function pollLeeTecPayment(requestId, tenantId){
+  for(let attempt=0; attempt<8; attempt++){
+    await new Promise(resolve=>setTimeout(resolve,8000));
+    try{
+      const response=await fetch('/api/stk-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requestId,tenantId,name:document.getElementById('tenantLoginName').value,idNumber:document.getElementById('tenantLoginId').value,phone:document.getElementById('tenantLoginPhone').value})});
+      const payload=await response.json().catch(()=>({error:'Payment status returned an invalid response.'}));
+      if(!response.ok) throw new Error(payload.error||'Unable to check payment status.');
+      if(payload.status==='SUCCESS'){ showToast('M-Pesa payment confirmed.','success'); await refreshTenantPortal(); return; }
+      if(['FAILED','CANCELLED','MANUAL_REVIEW'].includes(payload.status)){ showToast(`M-Pesa payment status: ${payload.status}.`,'info'); return; }
+    }catch(error){ if(attempt===7) showToast(error.message); }
+  }
+  showToast('Payment is still pending. Refresh your balance later.','info');
 }
 async function logoutTenantPortal(){
   const button=document.querySelector('.tenant-sidebar-logout'); setButtonBusy(button,true,'Logging out…');

@@ -91,6 +91,9 @@ module.exports = async (req, res) => {
       if (paymentAmount !== undefined && (!Number.isFinite(Number(paymentAmount)) || Number(paymentAmount) <= 0)) return res.status(400).json({ error: 'Payment amount must be greater than zero.' });
       const tenant = await tenants.findOne({ id: Number(id) });
       if (!tenant) return res.status(404).json({ error: 'Tenant not found.' });
+      const outstandingBalance = Math.max(0, Number(tenant.expected || 0) - Number(tenant.paid || 0));
+      if (paymentAmount !== undefined && Number(paymentAmount) > outstandingBalance) return res.status(400).json({ error: `Payment cannot exceed the current balance of Ksh ${outstandingBalance.toLocaleString()}.` });
+      if (paid !== undefined && Number(paid) > Number(tenant.expected || 0)) return res.status(400).json({ error: 'Total paid cannot exceed the tenant’s expected charges.' });
       if (action === 'delete-tenant') {
         if (confirmation !== 'DELETE TENANT') return res.status(400).json({ error: 'Type DELETE TENANT to confirm permanent tenant deletion.' });
         await tenants.deleteOne({ id: Number(id) });
