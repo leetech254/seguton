@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://seguton.yemtech.store/sitemap.xml
