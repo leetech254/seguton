@@ -1,12 +1,10 @@
 const { ROOM_DEFINITIONS, getDatabase, initializeDatabase, readSnapshot, cleanTenant } = require('../lib/database');
 const { requireAdmin } = require('../lib/auth');
 const { notifyTenant, notifyAdmins } = require('../lib/notifications');
+const { setSecurityHeaders } = require('../lib/security');
 
 module.exports = async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (!setSecurityHeaders(req, res, 'GET,POST,PATCH,OPTIONS')) return res.status(403).json({ error: 'Origin is not allowed.' });
   if (req.method === 'OPTIONS') return res.status(204).end();
 
   try {

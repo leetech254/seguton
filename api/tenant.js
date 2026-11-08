@@ -1,6 +1,7 @@
 const { getDatabase, initializeDatabase, cleanTenant } = require('../lib/database');
 const { notifyTenantAccountUpdate, notifyAdmins } = require('../lib/notifications');
 const { setTenantSession, readTenantSession, clearTenantSession } = require('../lib/auth');
+const { setSecurityHeaders, consumeRateLimit, clearRateLimit, rateLimitKey } = require('../lib/security');
 
 function normalizePhone(value) {
   const compact = String(value || '').replace(/[\s-]/g, '');
@@ -8,6 +9,8 @@ function normalizePhone(value) {
   if (/^\+254[17]\d{8}$/.test(compact)) return compact;
   return null;
 }
+
+function normalizeName(value) { return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase(); }
 
 function notificationPreferences(value) {
   const source = value && typeof value === 'object' ? value : {};
@@ -42,10 +45,7 @@ function publicTenant(tenant) {
 }
 
 module.exports = async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Methods', 'POST,PATCH,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (!setSecurityHeaders(req, res, 'POST,PATCH,OPTIONS')) return res.status(403).json({ error: 'Origin is not allowed.' });
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (!['POST', 'PATCH'].includes(req.method)) return res.status(405).json({ error: 'Method not allowed.' });
 
@@ -75,13 +75,18 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'Enter your full name, 8-digit National ID number, and valid Kenyan phone number.' });
     }
 
+    const tenantLoginKey = rateLimitKey(req, 'tenant-login', `${idNumber}:${phone}`);
+    const tenantLoginLimit = consumeRateLimit(tenantLoginKey, 8, 15 * 60 * 1000);
+    if (!tenantLoginLimit.allowed) return res.status(429).setHeader('Retry-After', tenantLoginLimit.retryAfter).json({ error: 'Too many tenant login attempts. Try again later.' });
+
     const records = await tenantCollection.find({
       idNumber,
       phone,
       status: { $in: ['pending', 'accepted'] }
     }).sort({ createdAt: -1 }).toArray();
-    const matches = records.filter((tenant) => String(tenant.name || '').toLowerCase() === name.toLowerCase());
+    const matches = records.filter((tenant) => normalizeName(tenant.name) === normalizeName(name));
     if (!matches.length) return res.status(401).json({ error: 'No matching tenant record was found. Check your name, ID number, and phone number.' });
+    clearRateLimit(tenantLoginKey);
     setTenantSession(res, matches);
 
     if (req.method === 'PATCH') {

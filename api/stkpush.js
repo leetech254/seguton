@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const { getDatabase, initializeDatabase } = require('../lib/database');
+const { setSecurityHeaders, consumeRateLimit, rateLimitKey } = require('../lib/security');
 
 function normalizePhone(value) {
   const compact = String(value || '').replace(/[\s-]/g, '');
@@ -25,10 +26,7 @@ function publicError(payload, status) {
 }
 
 module.exports = async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (!setSecurityHeaders(req, res, 'POST,OPTIONS')) return res.status(403).json({ error: 'Origin is not allowed.' });
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed.' });
 
@@ -45,6 +43,8 @@ module.exports = async (req, res) => {
     if (!name || !/^\d{8}$/.test(idNumber) || !phone || !Number.isInteger(amount) || amount < 1 || amount > 1500000) {
       return res.status(400).json({ error: 'Enter valid tenant details and a whole-KES payment amount between Ksh 1 and Ksh 1,500,000.' });
     }
+    const pushLimit = consumeRateLimit(rateLimitKey(req, 'stk-push', `${idNumber}:${phone}`), 3, 15 * 60 * 1000);
+    if (!pushLimit.allowed) return res.status(429).setHeader('Retry-After', pushLimit.retryAfter).json({ error: 'Too many payment prompts. Try again later.' });
 
     const db = await getDatabase();
     await initializeDatabase(db);

@@ -1,5 +1,6 @@
 const { getDatabase, initializeDatabase } = require('../lib/database');
 const { notifyTenant, notifyAdmins } = require('../lib/notifications');
+const { setSecurityHeaders, consumeRateLimit, rateLimitKey } = require('../lib/security');
 
 function normalizePhone(value) {
   const compact = String(value || '').replace(/[\s-]/g, '');
@@ -17,10 +18,7 @@ async function fetchWithTimeout(url, options = {}) {
 }
 
 module.exports = async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (!setSecurityHeaders(req, res, 'POST,OPTIONS')) return res.status(403).json({ error: 'Origin is not allowed.' });
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed.' });
 
@@ -38,6 +36,8 @@ module.exports = async (req, res) => {
     if (!requestId || !name || !/^\d{8}$/.test(idNumber) || !phone || !Number.isSafeInteger(tenantId)) {
       return res.status(400).json({ error: 'Invalid payment status request.' });
     }
+    const statusLimit = consumeRateLimit(rateLimitKey(req, 'payment-status', requestId), 12, 10 * 60 * 1000);
+    if (!statusLimit.allowed) return res.status(429).setHeader('Retry-After', statusLimit.retryAfter).json({ error: 'Too many payment status checks. Try again later.' });
 
     const db = await getDatabase();
     await initializeDatabase(db);

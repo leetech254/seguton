@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const { getDatabase, initializeDatabase } = require('../lib/database');
 const { hashPassword, verifyPassword, setSession, clearSession, readSession, requireAdmin } = require('../lib/auth');
 const { sendResendEmail } = require('../lib/notifications');
+const { setSecurityHeaders, consumeRateLimit, clearRateLimit, rateLimitKey } = require('../lib/security');
 
 function normalizeEmail(value) { return String(value || '').trim().toLowerCase(); }
 function validPassword(value) { return typeof value === 'string' && value.length >= 8; }
@@ -31,10 +32,7 @@ function htmlMessage(title, message) {
 }
 
 module.exports = async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (!setSecurityHeaders(req, res, 'GET,POST,OPTIONS')) return res.status(403).json({ error: 'Origin is not allowed.' });
   if (req.method === 'OPTIONS') return res.status(204).end();
 
   try {
@@ -62,6 +60,8 @@ module.exports = async (req, res) => {
 
     const body = req.body || {};
     if (body.action === 'setup') {
+      const setupLimit = consumeRateLimit(rateLimitKey(req, 'admin-setup', body.email), 3, 15 * 60 * 1000);
+      if (!setupLimit.allowed) return res.status(429).setHeader('Retry-After', setupLimit.retryAfter).json({ error: 'Too many setup attempts. Try again later.' });
       if (adminCount > 0) return res.status(409).json({ error: 'Administrator account already exists. Use login instead.' });
       if (!process.env.RESEND_API_KEY) return res.status(503).json({ error: 'Email verification is not configured. Add RESEND_API_KEY in Vercel before creating the administrator account.' });
       const email = normalizeEmail(body.email); const phone = normalizePhone(body.phone);
@@ -74,13 +74,20 @@ module.exports = async (req, res) => {
     }
 
     if (body.action === 'login') {
-      const email = normalizeEmail(body.email); const admin = await admins.findOne({ email });
+      const email = normalizeEmail(body.email);
+      const loginKey = rateLimitKey(req, 'admin-login', email);
+      const loginLimit = consumeRateLimit(loginKey, 6, 15 * 60 * 1000);
+      if (!loginLimit.allowed) return res.status(429).setHeader('Retry-After', loginLimit.retryAfter).json({ error: 'Too many login attempts. Try again later.' });
+      const admin = await admins.findOne({ email });
       if (!admin || !await verifyPassword(String(body.password || ''), admin.passwordHash)) return res.status(401).json({ error: 'Incorrect email or password.' });
       if (admin.emailVerified !== true) return res.status(403).json({ error: 'Verify your administrator email before signing in.', verificationRequired: true });
+      clearRateLimit(loginKey);
       setSession(res, admin); return res.status(200).json({ user: publicAdmin(admin) });
     }
 
     if (body.action === 'resend-verification') {
+      const resendLimit = consumeRateLimit(rateLimitKey(req, 'admin-resend', body.email), 3, 15 * 60 * 1000);
+      if (!resendLimit.allowed) return res.status(429).setHeader('Retry-After', resendLimit.retryAfter).json({ error: 'Too many verification requests. Try again later.' });
       const email = normalizeEmail(body.email); const admin = await admins.findOne({ email });
       if (admin && admin.emailVerified !== true && process.env.RESEND_API_KEY) {
         const verification = createToken(); await admins.updateOne({ _id: admin._id }, { $set: { emailVerificationTokenHash: verification.hash, emailVerificationExpiresAt: verification.expiresAt } });
@@ -90,6 +97,8 @@ module.exports = async (req, res) => {
     }
 
     if (body.action === 'forgot-password') {
+      const resetLimit = consumeRateLimit(rateLimitKey(req, 'admin-reset', body.email), 3, 15 * 60 * 1000);
+      if (!resetLimit.allowed) return res.status(429).setHeader('Retry-After', resetLimit.retryAfter).json({ error: 'Too many password-reset requests. Try again later.' });
       const email = normalizeEmail(body.email); const admin = await admins.findOne({ email });
       if (admin && process.env.RESEND_API_KEY) { const reset = createToken(); await admins.updateOne({ _id: admin._id }, { $set: { passwordResetTokenHash: reset.hash, passwordResetExpiresAt: reset.expiresAt } }); try { await sendPasswordReset(req, admin, reset.token); } catch (error) { console.error('SEGUTON password reset email failed:', error.message); } }
       return res.status(200).json({ ok: true, message: 'If an administrator account exists for that email, password reset instructions have been sent.' });
