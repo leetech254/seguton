@@ -46,14 +46,14 @@ module.exports = async (req, res) => {
       const action = String(req.query?.action || '');
       if (action === 'verify-email') {
         const admin = await admins.findOne({ emailVerificationTokenHash: hashToken(req.query?.token), emailVerificationExpiresAt: { $gt: new Date() } });
-        if (!admin) { res.status(400).setHeader('Content-Type', 'text/html').end(htmlMessage('Verification link expired', 'Request a new verification email from the management login page.')); return; }
+        if (!admin) { res.status(400).setHeader('Cache-Control', 'no-store').setHeader('Referrer-Policy', 'no-referrer').setHeader('Content-Type', 'text/html').end(htmlMessage('Verification link expired', 'Request a new verification email from the management login page.')); return; }
         await admins.updateOne({ _id: admin._id }, { $set: { emailVerified: true, updatedAt: new Date() }, $unset: { emailVerificationTokenHash: '', emailVerificationExpiresAt: '' } });
-        res.status(200).setHeader('Content-Type', 'text/html').end(htmlMessage('Email verified', 'Your administrator email is verified. Return to SEGUTON and sign in.')); return;
+        res.status(200).setHeader('Cache-Control', 'no-store').setHeader('Referrer-Policy', 'no-referrer').setHeader('Content-Type', 'text/html').end(htmlMessage('Email verified', 'Your administrator email is verified. Return to SEGUTON and sign in.')); return;
       }
       if (action === 'reset-password') {
         const admin = await admins.findOne({ passwordResetTokenHash: hashToken(req.query?.token), passwordResetExpiresAt: { $gt: new Date() } });
-        if (!admin) { res.status(400).setHeader('Content-Type', 'text/html').end(htmlMessage('Reset link expired', 'Request another password reset link from the management login page.')); return; }
-        res.status(200).setHeader('Content-Type', 'text/html').end(htmlMessage('Reset link ready', 'Return to SEGUTON, enter the reset token from this link if the app requests it, and choose a new password.')); return;
+        if (!admin) { res.status(400).setHeader('Cache-Control', 'no-store').setHeader('Referrer-Policy', 'no-referrer').setHeader('Content-Type', 'text/html').end(htmlMessage('Reset link expired', 'Request another password reset link from the management login page.')); return; }
+        res.status(200).setHeader('Cache-Control', 'no-store').setHeader('Referrer-Policy', 'no-referrer').setHeader('Content-Type', 'text/html').end(htmlMessage('Reset link ready', 'Return to SEGUTON, enter the reset token from this link if the app requests it, and choose a new password.')); return;
       }
       return res.status(200).json({ setupRequired: adminCount === 0, authenticated: Boolean(session), user: session ? { email: session.email } : null });
     }
@@ -63,7 +63,7 @@ module.exports = async (req, res) => {
       const setupLimit = consumeRateLimit(rateLimitKey(req, 'admin-setup', body.email), 3, 15 * 60 * 1000);
       if (!setupLimit.allowed) return res.status(429).setHeader('Retry-After', setupLimit.retryAfter).json({ error: 'Too many setup attempts. Try again later.' });
       if (adminCount > 0) return res.status(409).json({ error: 'Administrator account already exists. Use login instead.' });
-      if (!process.env.RESEND_API_KEY) return res.status(503).json({ error: 'Email verification is not configured. Add RESEND_API_KEY in Vercel before creating the administrator account.' });
+      if (!process.env.RESEND_API_KEY || !process.env.NOTIFICATION_FROM_EMAIL || !process.env.APP_URL) return res.status(503).json({ error: 'Email verification is not fully configured. Add RESEND_API_KEY, NOTIFICATION_FROM_EMAIL, and APP_URL in Vercel before creating the administrator account.' });
       const email = normalizeEmail(body.email); const phone = normalizePhone(body.phone);
       if (!validEmail(email) || !phone || !validPassword(body.password)) return res.status(400).json({ error: 'Enter a valid email, Kenyan phone number, and password with at least 8 characters.' });
       const verification = createToken();
@@ -89,7 +89,7 @@ module.exports = async (req, res) => {
       const resendLimit = consumeRateLimit(rateLimitKey(req, 'admin-resend', body.email), 3, 15 * 60 * 1000);
       if (!resendLimit.allowed) return res.status(429).setHeader('Retry-After', resendLimit.retryAfter).json({ error: 'Too many verification requests. Try again later.' });
       const email = normalizeEmail(body.email); const admin = await admins.findOne({ email });
-      if (admin && admin.emailVerified !== true && process.env.RESEND_API_KEY) {
+      if (admin && admin.emailVerified !== true && process.env.RESEND_API_KEY && process.env.NOTIFICATION_FROM_EMAIL && process.env.APP_URL) {
         const verification = createToken(); await admins.updateOne({ _id: admin._id }, { $set: { emailVerificationTokenHash: verification.hash, emailVerificationExpiresAt: verification.expiresAt } });
         try { await sendAdminVerification(req, admin, verification.token); } catch (error) { console.error('SEGUTON verification resend failed:', error.message); }
       }
@@ -100,11 +100,13 @@ module.exports = async (req, res) => {
       const resetLimit = consumeRateLimit(rateLimitKey(req, 'admin-reset', body.email), 3, 15 * 60 * 1000);
       if (!resetLimit.allowed) return res.status(429).setHeader('Retry-After', resetLimit.retryAfter).json({ error: 'Too many password-reset requests. Try again later.' });
       const email = normalizeEmail(body.email); const admin = await admins.findOne({ email });
-      if (admin && process.env.RESEND_API_KEY) { const reset = createToken(); await admins.updateOne({ _id: admin._id }, { $set: { passwordResetTokenHash: reset.hash, passwordResetExpiresAt: reset.expiresAt } }); try { await sendPasswordReset(req, admin, reset.token); } catch (error) { console.error('SEGUTON password reset email failed:', error.message); } }
+      if (admin && process.env.RESEND_API_KEY && process.env.NOTIFICATION_FROM_EMAIL && process.env.APP_URL) { const reset = createToken(); await admins.updateOne({ _id: admin._id }, { $set: { passwordResetTokenHash: reset.hash, passwordResetExpiresAt: reset.expiresAt } }); try { await sendPasswordReset(req, admin, reset.token); } catch (error) { console.error('SEGUTON password reset email failed:', error.message); } }
       return res.status(200).json({ ok: true, message: 'If an administrator account exists for that email, password reset instructions have been sent.' });
     }
 
     if (body.action === 'reset-password') {
+      const resetSubmitLimit = consumeRateLimit(rateLimitKey(req, 'admin-reset-submit'), 5, 15 * 60 * 1000);
+      if (!resetSubmitLimit.allowed) return res.status(429).setHeader('Retry-After', resetSubmitLimit.retryAfter).json({ error: 'Too many reset attempts. Request a new link later.' });
       const token = String(body.token || ''); const admin = await admins.findOne({ passwordResetTokenHash: hashToken(token), passwordResetExpiresAt: { $gt: new Date() } });
       if (!admin) return res.status(400).json({ error: 'This password reset link is invalid or expired. Request a new one.' });
       if (!validPassword(body.password)) return res.status(400).json({ error: 'New password must be at least 8 characters.' });

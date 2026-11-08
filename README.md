@@ -50,8 +50,8 @@ A browser-based rental and tenant management system.
    - `LEETEC_API_KEY`: LeeTec API key; keep it server-side and never expose it in browser code
    - `LEETEC_BASE_URL`: `https://leetec.online`
    - `LEETEC_WEBHOOK_SECRET`: optional secret from the LeeTec signed merchant webhook configuration; omit it to use status polling
-   - `RESEND_API_KEY`: optional Resend API key for tenant notifications and administrator alerts
-   - `NOTIFICATION_FROM_EMAIL`: verified Resend sender, for example `SEGUTON <notifications@example.com>`
+   - `RESEND_API_KEY`: Resend API key required for administrator verification, password reset, and email notifications
+   - `NOTIFICATION_FROM_EMAIL`: verified Resend sender, required for administrator email setup and notifications, for example `SEGUTON <notifications@example.com>`
    - `APP_URL`: public Vercel URL used in administrator verification and password-reset links, for example `https://seguton.vercel.app`
    - `AT_USERNAME`: optional Africa's Talking username for tenant SMS notifications
    - `AT_API_KEY`: Africa's Talking API key
@@ -60,7 +60,7 @@ A browser-based rental and tenant management system.
    The primary variable name must be exactly `MONGODB_URI`. The API also accepts `MONGODB_URL` and `MONGO_URI` for compatibility, but `MONGODB_URI` is recommended. Environment variables must be enabled for Production, and the project must be redeployed after changes.
 4. Deploy. The static app is served from `index.html`; `/api/data`, `/api/tenant`, `/api/stkpush`, `/api/stk-status`, and the optional `/api/stk-callback` are serverless endpoints. Do not add a catch-all rewrite in the Vercel dashboard; Vercel natively routes the root `api/` directory to Functions. On the first successful request, it creates/updates the `rooms` collection with all 14 rooms.
 
-The app requires the API and database environment variables. If the database is unavailable, the UI shows an error and does not save data locally. Notification delivery is optional and never prevents a rent or fee update from being saved; configure either Resend, Africa's Talking, or both. Tenant emails are used directly when provided; no email verification step is required.
+The app requires the API and database environment variables. If the database is unavailable, the UI shows an error and does not save data locally. Administrator setup requires Resend, a verified `NOTIFICATION_FROM_EMAIL`, and `APP_URL`; tenant email/SMS delivery is optional and never prevents a rent or fee update from being saved. Email delivery retries transient Resend failures and reports provider errors in server logs. Tenant emails are used directly when provided; no tenant email verification step is required.
 
 ## API
 

@@ -739,8 +739,11 @@ document.getElementById('resetPasswordForm').addEventListener('submit', async (e
 document.getElementById('passwordForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
   const status=document.getElementById('passwordStatus');
-  if(newPassword.value!==confirmPassword.value){ status.innerText='New passwords do not match.'; status.style.color='crimson'; showToast(status.innerText); return; }
-  try{ await authRequest('POST',{action:'change-password',currentPassword:currentPassword.value,newPassword:newPassword.value}); status.innerText='Password changed successfully.'; status.style.color='#198754'; showToast(status.innerText,'success'); e.target.reset(); }
+  const currentPassword=document.getElementById('currentPassword').value;
+  const newPassword=document.getElementById('newPassword').value;
+  const confirmPassword=document.getElementById('confirmPassword').value;
+  if(newPassword!==confirmPassword){ status.innerText='New passwords do not match.'; status.style.color='crimson'; showToast(status.innerText); return; }
+  try{ await authRequest('POST',{action:'change-password',currentPassword,newPassword}); status.innerText='Password changed successfully.'; status.style.color='#198754'; showToast(status.innerText,'success'); e.target.reset(); }
   catch(error){ status.innerText=error.message; status.style.color='crimson'; showToast(error.message); }
 });
 document.getElementById('deleteAccountForm').addEventListener('submit', async (e)=>{
