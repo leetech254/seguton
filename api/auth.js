@@ -161,6 +161,20 @@ module.exports = async (req, res) => {
       try { await sendResendEmail(admin.email, 'SEGUTON administrator email change requested', `A request was made to change your SEGUTON administrator email. Your current email remains active until the new address is confirmed. If you did not request this, sign in and change your password immediately.`); } catch (error) { console.error('SEGUTON old-email change alert failed:', error.message); }
       return res.status(200).json({ ok: true, message: 'Confirmation sent to the new email address. Your current email remains active until you confirm the change.' });
     }
+    if (body.action === 'add-admin') {
+      if (!requireAdmin(req, res)) return;
+      const limit = consumeRateLimit(rateLimitKey(req, 'admin-add', body.email), 3, 30 * 60 * 1000);
+      if (!limit.allowed) return res.status(429).setHeader('Retry-After', limit.retryAfter).json({ error: 'Too many secondary-admin requests. Try again later.' });
+      try { assertEmailConfiguration(); } catch (error) { return res.status(503).json({ error: error.message }); }
+      const email = normalizeEmail(body.email); const phone = normalizePhone(body.phone);
+      if (!validEmail(email) || !phone || !validPassword(body.password)) return res.status(400).json({ error: 'Enter a valid email, Kenyan phone number, and password with at least 8 characters.' });
+      if (await admins.findOne({ email })) return res.status(409).json({ error: 'That administrator email is already in use.' });
+      const verification = createToken();
+      const secondary = { email, phone, passwordHash: await hashPassword(body.password), emailVerified: false, emailVerificationTokenHash: verification.hash, emailVerificationExpiresAt: verification.expiresAt, createdAt: new Date(), updatedAt: new Date() };
+      try { await sendAdminVerification(req, secondary, verification.token); } catch (error) { console.error('SEGUTON secondary administrator delivery failed:', error.message); return res.status(502).json({ error: 'The secondary administrator verification email could not be delivered. Check the Resend sender/domain configuration and try again.' }); }
+      try { await admins.insertOne(secondary); } catch (error) { if (error?.code === 11000) return res.status(409).json({ error: 'That administrator email is already in use.' }); throw error; }
+      return res.status(201).json({ ok: true, email, message: 'Secondary administrator created. They must verify the email link before signing in.' });
+    }
     if (body.action === 'change-password') {
       if (!requireAdmin(req, res)) return; const current = readSession(req); const admin = await admins.findOne({ email: current.email });
       if (!admin || !await verifyPassword(String(body.currentPassword || ''), admin.passwordHash)) return res.status(401).json({ error: 'Current password is incorrect.' });

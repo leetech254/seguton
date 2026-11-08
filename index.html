@@ -254,7 +254,7 @@ body.tenant-portal-mode .nav{display:none}body.tenant-portal-mode{background:#ee
 <!-- ADMIN LOGIN / FIRST-TIME SETUP -->
 <div id="loginPage" class="page">
   <div class="card auth-card">
-    <div id="setupView">
+    <div id="setupView" style="display:none">
       <h1>Create Administrator</h1>
       <p class="sub">One-time setup for the estate management account</p>
       <form id="setupForm">
@@ -265,7 +265,7 @@ body.tenant-portal-mode .nav{display:none}body.tenant-portal-mode{background:#ee
       </form>
       <p class="field-help auth-note">A branded verification email will be sent immediately. Check Inbox, Promotions, and Spam; the link expires in 30 minutes.</p>
     </div>
-    <div id="loginView" style="display:none">
+    <div id="loginView">
       <h1>Management Login</h1>
       <p class="sub">Sign in to manage rooms, tenants and payments</p>
       <form id="loginForm">
@@ -331,6 +331,17 @@ body.tenant-portal-mode .nav{display:none}body.tenant-portal-mode{background:#ee
         <label>New administrator email</label><input type="email" id="newAdminEmail" required autocomplete="email" placeholder="new-admin@example.com">
         <button type="submit" class="submit">Send confirmation link</button>
         <div id="emailChangeStatus" class="status-msg"></div>
+      </form>
+      <hr style="margin:24px 0;border:0;border-top:1px solid #ddd">
+      <h3>Add a secondary administrator</h3>
+      <p class="sub">Create another management login without replacing your current account. The new administrator must verify their email before signing in.</p>
+      <form id="addAdminForm">
+        <label>Secondary administrator email</label><input type="email" id="secondaryAdminEmail" required autocomplete="email" placeholder="manager@example.com">
+        <label>Phone number</label><input type="tel" id="secondaryAdminPhone" required autocomplete="tel" placeholder="+254 700 000 000">
+        <label>Temporary password</label><input type="password" id="secondaryAdminPassword" required minlength="8" autocomplete="new-password" placeholder="At least 8 characters">
+        <label>Confirm temporary password</label><input type="password" id="secondaryAdminPasswordConfirm" required minlength="8" autocomplete="new-password" placeholder="Repeat the password">
+        <button type="submit" class="submit">Add secondary administrator</button>
+        <div id="addAdminStatus" class="status-msg"></div>
       </form>
       <hr style="margin:24px 0;border:0;border-top:1px solid #ddd">
       <h3 style="color:#c0392b">Delete administrator account</h3>
@@ -811,6 +822,19 @@ document.getElementById('emailChangeForm').addEventListener('submit', async (e)=
   setButtonBusy(button,true,'Sending…');
   try{
     const result=await authRequest('POST',{action:'request-email-change',email:document.getElementById('newAdminEmail').value});
+    status.innerText=result.message; status.style.color='#198754'; showToast(result.message,'success'); e.target.reset();
+  }catch(error){ status.innerText=error.message; status.style.color='crimson'; showToast(error.message); }
+  finally{ setButtonBusy(button,false); }
+});
+document.getElementById('addAdminForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const status=document.getElementById('addAdminStatus');
+  const password=document.getElementById('secondaryAdminPassword').value;
+  const confirmPassword=document.getElementById('secondaryAdminPasswordConfirm').value;
+  if(password!==confirmPassword){ status.innerText='The secondary administrator passwords do not match.'; status.style.color='crimson'; showToast(status.innerText); return; }
+  const button=e.target.querySelector('button[type="submit"]'); setButtonBusy(button,true,'Creating…');
+  try{
+    const result=await authRequest('POST',{action:'add-admin',email:document.getElementById('secondaryAdminEmail').value,phone:document.getElementById('secondaryAdminPhone').value,password});
     status.innerText=result.message; status.style.color='#198754'; showToast(result.message,'success'); e.target.reset();
   }catch(error){ status.innerText=error.message; status.style.color='crimson'; showToast(error.message); }
   finally{ setButtonBusy(button,false); }
