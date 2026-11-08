@@ -18,7 +18,7 @@ A browser-based rental and tenant management system.
 - Login-first management entry: the setup form appears only when the server confirms that no administrator exists
 - Settings can add verified secondary administrator logins without replacing the primary account
 - Secure management login with HTTP-only sessions and hashed passwords
-- Login help can recover the administrator email only after matching the administrator phone number and password; if that account is unverified, a fresh verification email is sent automatically to its stored email; the signed-in email is also shown in Settings
+- Login help can send a one-time message to the stored primary administrator email without collecting a phone number, password, or email; unverified accounts receive a fresh verification link and verified accounts receive their login email; the signed-in email is also shown in Settings
 - Settings tab for changing the administrator password
 - Password-confirmed administrator account deletion with explicit `DELETE` confirmation; tenant and room records are preserved
 - Non-blocking toast notifications for API errors, validation failures, authentication, payments, and successful actions

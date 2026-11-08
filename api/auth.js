@@ -40,6 +40,9 @@ async function sendEmailChangeConfirmation(req, email, token) {
   const url = authUrl(req, 'confirm-email-change', token);
   return sendRequiredResendEmail(email, 'Confirm your SEGUTON administrator email change', `Hello,\n\nConfirm this new email address for your SEGUTON administrator account by opening this link:\n${url}\n\nThis link expires in 30 minutes. Your current administrator email remains active until confirmation.\n\nSEGUTON Estate Management`, emailTemplate('Confirm your new email', 'Confirm your SEGUTON email change', 'You requested a new email address for administrator notifications and login. Confirm it below; your current email remains active until then.', 'Confirm new email address', url, 'If you did not request this change, ignore this email. Your current administrator email remains active.'));
 }
+async function sendAdminLoginReminder(admin) {
+  return sendRequiredResendEmail(admin.email, 'Your SEGUTON administrator login email', `Your SEGUTON administrator login email is: ${admin.email}\n\nIf you did not request this message, change your administrator password immediately.\n\nSEGUTON Estate Management`, noticeEmailTemplate('LOGIN HELP', 'Your administrator login email', `Your SEGUTON administrator login email is ${admin.email}.`, 'If you did not request this message, change your administrator password immediately.'));
+}
 function escapeHtml(value) { return String(value || '').replace(/[&<>"']/g, character => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[character])); }
 function emailTemplate(title, heading, message, buttonLabel, buttonUrl, footer) {
   return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"></head><body style="margin:0;background:#eef3f8;font-family:Arial,Helvetica,sans-serif;color:#243447"><div style="max-width:620px;margin:0 auto;padding:28px 16px"><div style="background:#102235;border-radius:16px 16px 0 0;padding:22px 24px;color:#f1c40f;font-size:22px;font-weight:800;letter-spacing:1px">🏠 SEGUTON <span style="display:block;color:#aebdca;font-size:11px;letter-spacing:1.5px;margin-top:5px">ESTATE MANAGEMENT</span></div><div style="background:#fff;padding:32px 24px;border-radius:0 0 16px 16px;box-shadow:0 8px 24px rgba(16,34,53,.12)"><p style="color:#9a7300;font-size:11px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 10px">${escapeHtml(title)}</p><h1 style="font-size:26px;line-height:1.2;margin:0 0 14px;color:#243447">${escapeHtml(heading)}</h1><p style="font-size:16px;line-height:1.6;margin:0 0 24px;color:#526273">${escapeHtml(message)}</p><a href="${escapeHtml(buttonUrl)}" style="display:inline-block;background:#f1c40f;color:#17283c;text-decoration:none;font-weight:800;border-radius:10px;padding:14px 18px">${escapeHtml(buttonLabel)}</a><p style="font-size:12px;line-height:1.5;color:#7b8794;margin:26px 0 0">${escapeHtml(footer)}</p><p style="font-size:12px;line-height:1.5;color:#9aa6b2;margin:18px 0 0">If the button does not work, copy and paste the link from the plain-text version of this email into your browser.</p></div><p style="text-align:center;color:#8a98a8;font-size:11px;margin:18px 0">SEGUTON Estate Management · Secure administrator notifications</p></div></body></html>`;
@@ -115,6 +118,25 @@ module.exports = async (req, res) => {
       if (admin.emailVerified !== true) return res.status(403).json({ error: 'Verify your administrator email before signing in.', verificationRequired: true });
       clearRateLimit(loginKey);
       setSession(res, admin); return res.status(200).json({ user: publicAdmin(admin) });
+    }
+
+    if (body.action === 'send-login-help') {
+      const helpLimit = consumeRateLimit(rateLimitKey(req, 'admin-login-help'), 3, 15 * 60 * 1000);
+      if (!helpLimit.allowed) return res.status(429).setHeader('Retry-After', helpLimit.retryAfter).json({ error: 'Too many login-help requests. Try again later.' });
+      const primary = await admins.find({}).sort({ createdAt: 1, _id: 1 }).limit(1).next();
+      if (primary) {
+        try {
+          if (primary.emailVerified === true) {
+            await sendAdminLoginReminder(primary);
+          } else {
+            assertEmailConfiguration();
+            const verification = createToken();
+            await sendAdminVerification(req, primary, verification.token);
+            await admins.updateOne({ _id: primary._id }, { $set: { emailVerificationTokenHash: verification.hash, emailVerificationExpiresAt: verification.expiresAt, updatedAt: new Date() } });
+          }
+        } catch (error) { console.error('SEGUTON login-help delivery failed:', error.message); }
+      }
+      return res.status(200).json({ ok: true, message: 'If a primary administrator account exists, a one-time SEGUTON login-help email has been sent to its stored address. Check Inbox, Promotions, and Spam.' });
     }
 
     if (body.action === 'recover-email') {
