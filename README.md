@@ -62,6 +62,8 @@ A browser-based rental and tenant management system.
 
 The app requires the API and database environment variables. If the database is unavailable, the UI shows an error and does not save data locally. Administrator setup requires Resend, a verified `NOTIFICATION_FROM_EMAIL`, and `APP_URL`; tenant email/SMS delivery is optional and never prevents a rent or fee update from being saved. Email delivery retries transient Resend failures and reports provider errors in server logs. Tenant emails are used directly when provided; no tenant email verification step is required.
 
+The deployment runtime must use Node.js 20.19 or newer because the application uses MongoDB driver 7. Administrator email changes are confirmation-based: the current email remains active until a one-time link sent to the new address is opened. Verification, reset, and email-change links expire after 30 minutes and are not reusable.
+
 ## API
 
 - `GET /api/data` — connects to the database, automatically seeds the full 14-room catalog, and returns tenants plus room occupancy

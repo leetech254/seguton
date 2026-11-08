@@ -268,7 +268,7 @@ body.tenant-portal-mode .nav{display:none}body.tenant-portal-mode{background:#ee
         <label>Password</label><input type="password" id="loginPassword" required autocomplete="current-password" placeholder="Your password">
         <button id="loginSubmit" type="submit" class="submit">Sign in</button>
       </form>
-      <div class="auth-links"><button type="button" class="muted-link" onclick="showForgotPassword()">Forgot password?</button><button type="button" class="muted-link" onclick="showResendVerification()">Email update</button></div>
+      <div class="auth-links"><button type="button" class="muted-link" onclick="showForgotPassword()">Forgot password?</button><button type="button" class="muted-link" onclick="showResendVerification()">Resend verification</button></div>
       <div id="forgotPasswordView" class="auth-recovery" style="display:none"><h3>Reset administrator password</h3><p class="field-help">Enter your administrator email. If your account exists, an email with a one-time reset link will be sent.</p><form id="forgotPasswordForm"><label>Email</label><input type="email" id="forgotEmail" required autocomplete="email"><button type="submit" class="submit">Send reset link</button></form><button type="button" class="muted-link" onclick="hideRecoveryViews()">Back to login</button></div>
       <div id="resendVerificationView" class="auth-recovery" style="display:none"><h3>Email update</h3><p class="field-help">Send a new administrator email verification link.</p><form id="resendVerificationForm"><label>Email</label><input type="email" id="resendEmail" required autocomplete="email"><button type="submit" class="submit">Send email update</button></form><button type="button" class="muted-link" onclick="hideRecoveryViews()">Back to login</button></div>
       <div id="resetPasswordView" class="auth-recovery" style="display:none"><h3>Choose a new password</h3><form id="resetPasswordForm"><label>New password</label><input type="password" id="resetPassword" required minlength="8" autocomplete="new-password"><label>Confirm new password</label><input type="password" id="resetPasswordConfirm" required minlength="8" autocomplete="new-password"><button type="submit" class="submit">Reset password</button></form></div>
@@ -318,6 +318,14 @@ body.tenant-portal-mode .nav{display:none}body.tenant-portal-mode{background:#ee
         <label>Confirm new password</label><input type="password" id="confirmPassword" required minlength="8" autocomplete="new-password">
         <button type="submit" class="submit">Change password</button>
         <div id="passwordStatus" class="status-msg"></div>
+      </form>
+      <hr style="margin:24px 0;border:0;border-top:1px solid #ddd">
+      <h3>Change administrator email</h3>
+      <p class="sub">Your current email stays active until you confirm the new address.</p>
+      <form id="emailChangeForm">
+        <label>New administrator email</label><input type="email" id="newAdminEmail" required autocomplete="email" placeholder="new-admin@example.com">
+        <button type="submit" class="submit">Send confirmation link</button>
+        <div id="emailChangeStatus" class="status-msg"></div>
       </form>
       <hr style="margin:24px 0;border:0;border-top:1px solid #ddd">
       <h3 style="color:#c0392b">Delete administrator account</h3>
@@ -782,6 +790,17 @@ document.getElementById('passwordForm').addEventListener('submit', async (e)=>{
   if(newPassword!==confirmPassword){ status.innerText='New passwords do not match.'; status.style.color='crimson'; showToast(status.innerText); return; }
   try{ await authRequest('POST',{action:'change-password',currentPassword,newPassword}); status.innerText='Password changed successfully.'; status.style.color='#198754'; showToast(status.innerText,'success'); e.target.reset(); }
   catch(error){ status.innerText=error.message; status.style.color='crimson'; showToast(error.message); }
+});
+document.getElementById('emailChangeForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const status=document.getElementById('emailChangeStatus');
+  const button=e.target.querySelector('button[type="submit"]');
+  setButtonBusy(button,true,'Sending…');
+  try{
+    const result=await authRequest('POST',{action:'request-email-change',email:document.getElementById('newAdminEmail').value});
+    status.innerText=result.message; status.style.color='#198754'; showToast(result.message,'success'); e.target.reset();
+  }catch(error){ status.innerText=error.message; status.style.color='crimson'; showToast(error.message); }
+  finally{ setButtonBusy(button,false); }
 });
 document.getElementById('deleteAccountForm').addEventListener('submit', async (e)=>{
   e.preventDefault();

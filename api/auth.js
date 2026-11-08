@@ -18,14 +18,25 @@ function createToken() {
   return { token, hash: crypto.createHash('sha256').update(token).digest('hex'), expiresAt: new Date(Date.now() + 1000 * 60 * 30) };
 }
 function hashToken(token) { return crypto.createHash('sha256').update(String(token || '')).digest('hex'); }
-function baseUrl(req) { return (process.env.APP_URL || `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers['x-forwarded-host'] || req.headers.host}`).replace(/\/$/, ''); }
-function authUrl(req, action, token) { return `${baseUrl(req)}/api/auth?action=${action}&token=${encodeURIComponent(token)}`; }
+function baseUrl(req) {
+  const configured = process.env.APP_URL || `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers['x-forwarded-host'] || req.headers.host}`;
+  return new URL(configured).origin;
+}
+function authUrl(req, action, token) {
+  const url = new URL('/api/auth', baseUrl(req));
+  url.searchParams.set('action', action); url.searchParams.set('token', token);
+  return url.toString();
+}
 async function sendAdminVerification(req, admin, token) {
   return sendResendEmail(admin.email, 'Verify your SEGUTON administrator email', `Hello,\n\nVerify your SEGUTON administrator email by opening this link:\n${authUrl(req, 'verify-email', token)}\n\nThis link expires in 30 minutes.\n\nSEGUTON Estate Management`);
 }
 async function sendPasswordReset(req, admin, token) {
-  const resetUrl = `${baseUrl(req)}/?reset_token=${encodeURIComponent(token)}`;
+  const resetUrlObject = new URL('/', baseUrl(req)); resetUrlObject.searchParams.set('reset_token', token);
+  const resetUrl = resetUrlObject.toString();
   return sendResendEmail(admin.email, 'Reset your SEGUTON administrator password', `Hello,\n\nA password reset was requested for your SEGUTON administrator account. Open this link to choose a new password:\n${resetUrl}\n\nThis link expires in 30 minutes. If you did not request this, ignore this message.\n\nSEGUTON Estate Management`);
+}
+async function sendEmailChangeConfirmation(req, email, token) {
+  return sendResendEmail(email, 'Confirm your SEGUTON administrator email change', `Hello,\n\nConfirm this new email address for your SEGUTON administrator account by opening this link:\n${authUrl(req, 'confirm-email-change', token)}\n\nThis link expires in 30 minutes. Your current administrator email remains active until confirmation.\n\nSEGUTON Estate Management`);
 }
 function htmlMessage(title, message) {
   return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="font-family:Arial,sans-serif;padding:32px;color:#243447"><h1>${title}</h1><p>${message}</p><p>You can close this window and return to SEGUTON.</p></body></html>`;
@@ -49,6 +60,17 @@ module.exports = async (req, res) => {
         if (!admin) { res.status(400).setHeader('Cache-Control', 'no-store').setHeader('Referrer-Policy', 'no-referrer').setHeader('Content-Type', 'text/html').end(htmlMessage('Verification link expired', 'Request a new verification email from the management login page.')); return; }
         await admins.updateOne({ _id: admin._id }, { $set: { emailVerified: true, updatedAt: new Date() }, $unset: { emailVerificationTokenHash: '', emailVerificationExpiresAt: '' } });
         res.status(200).setHeader('Cache-Control', 'no-store').setHeader('Referrer-Policy', 'no-referrer').setHeader('Content-Type', 'text/html').end(htmlMessage('Email verified', 'Your administrator email is verified. Return to SEGUTON and sign in.')); return;
+      }
+      if (action === 'confirm-email-change') {
+        const admin = await admins.findOne({ pendingEmailTokenHash: hashToken(req.query?.token), pendingEmailExpiresAt: { $gt: new Date() } });
+        if (!admin) { res.status(400).setHeader('Cache-Control', 'no-store').setHeader('Referrer-Policy', 'no-referrer').setHeader('Content-Type', 'text/html').end(htmlMessage('Email change link expired', 'Request a new administrator email change link from SEGUTON settings.')); return; }
+        const nextEmail = normalizeEmail(admin.pendingEmail);
+        if (!validEmail(nextEmail) || await admins.findOne({ email: nextEmail, _id: { $ne: admin._id } })) { res.status(409).setHeader('Cache-Control', 'no-store').setHeader('Referrer-Policy', 'no-referrer').setHeader('Content-Type', 'text/html').end(htmlMessage('Email change unavailable', 'That email address is already in use. Return to SEGUTON and request a different address.')); return; }
+        await admins.updateOne({ _id: admin._id }, { $set: { email: nextEmail, emailVerified: true, updatedAt: new Date() }, $unset: { pendingEmail: '', pendingEmailTokenHash: '', pendingEmailExpiresAt: '' } });
+        const currentSession = readSession(req);
+        if (currentSession && currentSession.id === String(admin._id)) setSession(res, { ...admin, email: nextEmail });
+        try { await sendResendEmail(nextEmail, 'SEGUTON administrator email updated', 'Your SEGUTON administrator email has been updated successfully. If you did not make this change, contact estate management immediately.'); } catch (error) { console.error('SEGUTON email-change confirmation failed:', error.message); }
+        res.status(200).setHeader('Cache-Control', 'no-store').setHeader('Referrer-Policy', 'no-referrer').setHeader('Content-Type', 'text/html').end(htmlMessage('Email updated', 'Your administrator email has been updated. Return to SEGUTON and sign in with the new email address.')); return;
       }
       if (action === 'reset-password') {
         const admin = await admins.findOne({ passwordResetTokenHash: hashToken(req.query?.token), passwordResetExpiresAt: { $gt: new Date() } });
@@ -115,6 +137,23 @@ module.exports = async (req, res) => {
     }
 
     if (body.action === 'logout') { clearSession(res); return res.status(200).json({ ok: true }); }
+    if (body.action === 'request-email-change') {
+      if (!requireAdmin(req, res)) return;
+      const current = readSession(req); const admin = await admins.findOne({ email: current.email });
+      if (!admin) return res.status(401).json({ error: 'Administrator session is no longer valid. Sign in again.' });
+      const limit = consumeRateLimit(rateLimitKey(req, 'admin-email-change', body.email), 3, 30 * 60 * 1000);
+      if (!limit.allowed) return res.status(429).setHeader('Retry-After', limit.retryAfter).json({ error: 'Too many email-change requests. Try again later.' });
+      if (!process.env.RESEND_API_KEY || !process.env.NOTIFICATION_FROM_EMAIL || !process.env.APP_URL) return res.status(503).json({ error: 'Email confirmation is not fully configured. Add RESEND_API_KEY, NOTIFICATION_FROM_EMAIL, and APP_URL in Vercel.' });
+      const nextEmail = normalizeEmail(body.email);
+      if (!validEmail(nextEmail)) return res.status(400).json({ error: 'Enter a valid email address.' });
+      if (nextEmail === admin.email) return res.status(400).json({ error: 'Enter a different email address.' });
+      if (await admins.findOne({ email: nextEmail, _id: { $ne: admin._id } })) return res.status(409).json({ error: 'That email address is already in use.' });
+      const change = createToken();
+      try { await sendEmailChangeConfirmation(req, nextEmail, change.token); } catch (error) { console.error('SEGUTON email-change request failed:', error.message); return res.status(502).json({ error: 'Confirmation email could not be sent. Check the address and email configuration, then try again.' }); }
+      await admins.updateOne({ _id: admin._id }, { $set: { pendingEmail: nextEmail, pendingEmailTokenHash: change.hash, pendingEmailExpiresAt: change.expiresAt, updatedAt: new Date() } });
+      try { await sendResendEmail(admin.email, 'SEGUTON administrator email change requested', `A request was made to change your SEGUTON administrator email. Your current email remains active until the new address is confirmed. If you did not request this, sign in and change your password immediately.`); } catch (error) { console.error('SEGUTON old-email change alert failed:', error.message); }
+      return res.status(200).json({ ok: true, message: 'Confirmation sent to the new email address. Your current email remains active until you confirm the change.' });
+    }
     if (body.action === 'change-password') {
       if (!requireAdmin(req, res)) return; const current = readSession(req); const admin = await admins.findOne({ email: current.email });
       if (!admin || !await verifyPassword(String(body.currentPassword || ''), admin.passwordHash)) return res.status(401).json({ error: 'Current password is incorrect.' });
