@@ -1,14 +1,7 @@
 const crypto = require('crypto');
 const { getDatabase, initializeDatabase } = require('../lib/database');
 const { setSecurityHeaders, consumeRateLimit, rateLimitKey } = require('../lib/security');
-
-function normalizePhone(value) {
-  const compact = String(value || '').replace(/[\s-]/g, '');
-  if (/^0[17]\d{8}$/.test(compact)) return '254' + compact.slice(1);
-  if (/^\+254[17]\d{8}$/.test(compact)) return compact.slice(1);
-  if (/^254[17]\d{8}$/.test(compact)) return compact;
-  return null;
-}
+const { normalizeKenyanPhone, phoneVariants } = require('../lib/phone');
 
 async function fetchWithTimeout(url, options = {}) {
   const controller = new AbortController();
@@ -38,8 +31,8 @@ module.exports = async (req, res) => {
     const body = req.body || {};
     const name = String(body.name || '').trim();
     const idNumber = String(body.idNumber || '').trim();
-    const phone = normalizePhone(body.phone);
-    const amount = Math.floor(Number(body.amount));
+    const phone = normalizeKenyanPhone(body.phone, 'mpesa');
+    const amount = Number(body.amount);
     if (!name || !/^\d{8}$/.test(idNumber) || !phone || !Number.isInteger(amount) || amount < 1 || amount > 1500000) {
       return res.status(400).json({ error: 'Enter valid tenant details and a whole-KES payment amount between Ksh 1 and Ksh 1,500,000.' });
     }
@@ -49,7 +42,7 @@ module.exports = async (req, res) => {
     const db = await getDatabase();
     await initializeDatabase(db);
     const tenants = db.collection('tenants');
-    const tenant = await tenants.findOne({ id: Number(body.tenantId), idNumber, phone: { $in: [phone, '+254' + phone.slice(3)] }, status: { $in: ['pending', 'accepted'] } });
+    const tenant = await tenants.findOne({ id: Number(body.tenantId), idNumber, phone: { $in: phoneVariants(phone) }, status: { $in: ['pending', 'accepted'] } });
     if (!tenant || String(tenant.name || '').toLowerCase() !== name.toLowerCase()) return res.status(401).json({ error: 'Tenant details could not be verified.' });
 
     const balance = Math.max(0, Number(tenant.expected || 0) - Number(tenant.paid || 0));

@@ -3,14 +3,11 @@ const { getDatabase, initializeDatabase } = require('../lib/database');
 const { hashPassword, verifyPassword, setSession, clearSession, readSession, requireAdmin } = require('../lib/auth');
 const { sendResendEmail, sendRequiredResendEmail, assertEmailConfiguration } = require('../lib/notifications');
 const { setSecurityHeaders, consumeRateLimit, clearRateLimit, rateLimitKey } = require('../lib/security');
+const { normalizeKenyanPhone } = require('../lib/phone');
 
 function normalizeEmail(value) { return String(value || '').trim().toLowerCase(); }
 function validPassword(value) { return typeof value === 'string' && value.length >= 8; }
-function normalizePhone(value) {
-  const compact = String(value || '').replace(/[\s-]/g, '');
-  if (/^0[17]\d{8}$/.test(compact)) return '+254' + compact.slice(1);
-  return /^\+254[17]\d{8}$/.test(compact) ? compact : null;
-}
+function normalizePhone(value) { return normalizeKenyanPhone(value); }
 function validEmail(value) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value); }
 function publicAdmin(admin) { return { email: admin.email, phone: admin.phone, createdAt: admin.createdAt, emailVerified: Boolean(admin.emailVerified) }; }
 function createToken() {

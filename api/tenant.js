@@ -2,13 +2,7 @@ const { getDatabase, initializeDatabase, cleanTenant } = require('../lib/databas
 const { notifyTenantAccountUpdate, notifyAdmins } = require('../lib/notifications');
 const { setTenantSession, readTenantSession, clearTenantSession } = require('../lib/auth');
 const { setSecurityHeaders, consumeRateLimit, clearRateLimit, rateLimitKey } = require('../lib/security');
-
-function normalizePhone(value) {
-  const compact = String(value || '').replace(/[\s-]/g, '');
-  if (/^0[17]\d{8}$/.test(compact)) return '+254' + compact.slice(1);
-  if (/^\+254[17]\d{8}$/.test(compact)) return compact;
-  return null;
-}
+const { normalizeKenyanPhone, phoneVariants } = require('../lib/phone');
 
 function normalizeName(value) { return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase(); }
 
@@ -70,7 +64,7 @@ module.exports = async (req, res) => {
 
     const name = String(body.name || '').trim();
     const idNumber = String(body.idNumber || '').trim();
-    const phone = normalizePhone(body.phone);
+    const phone = normalizeKenyanPhone(body.phone);
     if (!name || !/^\d{8}$/.test(idNumber) || !phone) {
       return res.status(400).json({ error: 'Enter your full name, 8-digit National ID number, and valid Kenyan phone number.' });
     }
@@ -81,7 +75,7 @@ module.exports = async (req, res) => {
 
     const records = await tenantCollection.find({
       idNumber,
-      phone,
+      phone: { $in: phoneVariants(phone) },
       status: { $in: ['pending', 'accepted'] }
     }).sort({ createdAt: -1 }).toArray();
     const matches = records.filter((tenant) => normalizeName(tenant.name) === normalizeName(name));
@@ -91,7 +85,7 @@ module.exports = async (req, res) => {
 
     if (req.method === 'PATCH') {
       const email = String(body.email || '').trim().toLowerCase();
-      const newPhone = normalizePhone(body.newPhone || body.phone);
+      const newPhone = normalizeKenyanPhone(body.newPhone || body.phone);
       const preferences = notificationPreferences(body.notificationPreferences === undefined ? matches[0].notificationPreferences : body.notificationPreferences);
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Enter a valid email address.' });
       if (!newPhone) return res.status(400).json({ error: 'Enter a valid Kenyan phone number using +254 7xx/1xx or 07xx/01xx.' });

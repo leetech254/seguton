@@ -1,14 +1,7 @@
 const { getDatabase, initializeDatabase } = require('../lib/database');
 const { notifyTenant, notifyAdmins } = require('../lib/notifications');
 const { setSecurityHeaders, consumeRateLimit, rateLimitKey } = require('../lib/security');
-
-function normalizePhone(value) {
-  const compact = String(value || '').replace(/[\s-]/g, '');
-  if (/^0[17]\d{8}$/.test(compact)) return '254' + compact.slice(1);
-  if (/^\+254[17]\d{8}$/.test(compact)) return compact.slice(1);
-  if (/^254[17]\d{8}$/.test(compact)) return compact;
-  return null;
-}
+const { normalizeKenyanPhone, phoneVariants } = require('../lib/phone');
 
 async function fetchWithTimeout(url, options = {}) {
   const controller = new AbortController();
@@ -31,7 +24,7 @@ module.exports = async (req, res) => {
     const requestId = String(body.requestId || '').trim();
     const name = String(body.name || '').trim();
     const idNumber = String(body.idNumber || '').trim();
-    const phone = normalizePhone(body.phone);
+    const phone = normalizeKenyanPhone(body.phone, 'mpesa');
     const tenantId = Number(body.tenantId);
     if (!requestId || !name || !/^\d{8}$/.test(idNumber) || !phone || !Number.isSafeInteger(tenantId)) {
       return res.status(400).json({ error: 'Invalid payment status request.' });
@@ -42,7 +35,7 @@ module.exports = async (req, res) => {
     const db = await getDatabase();
     await initializeDatabase(db);
     const tenants = db.collection('tenants');
-    const tenant = await tenants.findOne({ id: tenantId, idNumber, phone: { $in: [phone, '+254' + phone.slice(3)] }, status: { $in: ['pending', 'accepted'] } });
+    const tenant = await tenants.findOne({ id: tenantId, idNumber, phone: { $in: phoneVariants(phone) }, status: { $in: ['pending', 'accepted'] } });
     if (!tenant || String(tenant.name || '').toLowerCase() !== name.toLowerCase()) return res.status(401).json({ error: 'Tenant details could not be verified.' });
 
     const payment = (tenant.stkPayments || []).find(item => item.requestId === requestId);
