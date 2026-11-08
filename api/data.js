@@ -2,6 +2,7 @@ const { ROOM_DEFINITIONS, getDatabase, initializeDatabase, readSnapshot, cleanTe
 const { requireAdmin } = require('../lib/auth');
 const { notifyTenant, notifyAdmins } = require('../lib/notifications');
 const { setSecurityHeaders } = require('../lib/security');
+const { normalizeKenyanPhone } = require('../lib/phone');
 
 function validMoveInDate(value) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) return false;
@@ -41,9 +42,9 @@ module.exports = async (req, res) => {
       const name = String(body.name || '').trim();
       if (name.length < 2 || name.length > 120) return res.status(400).json({ error: 'Enter a valid full name.' });
       if (!/^\d{8}$/.test(idNumber)) return res.status(400).json({ error: 'Kenyan National ID number must contain exactly 8 digits.' });
-      const phone = String(body.phone).replace(/[\s-]/g, '');
+      const phone = normalizeKenyanPhone(body.phone);
       const email = String(body.email || '').trim().toLowerCase();
-      if (!/^(?:\+254|0)[17]\d{8}$/.test(phone)) return res.status(400).json({ error: 'Enter a valid Kenyan phone number using +254 7xx/1xx or 07xx/01xx.' });
+      if (!phone) return res.status(400).json({ error: 'Enter a valid Kenyan phone number using +254 7xx/1xx, 254 7xx/1xx, or 07xx/01xx.' });
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Enter a valid email address.' });
       if (!Number.isFinite(submittedExpected) || submittedExpected !== expected || !Number.isFinite(paid) || paid < 0) return res.status(400).json({ error: 'The selected room rent is invalid. Refresh the room list and try again.' });
       if (paid !== 0) return res.status(400).json({ error: 'Registration payments must be completed through the M-Pesa payment prompt.' });
@@ -52,7 +53,7 @@ module.exports = async (req, res) => {
       if (activeRoomApplication?.status === 'accepted') return res.status(409).json({ error: `Room ${houseNo} is already occupied. Refresh the room list and choose another room.` });
       if (activeRoomApplication?.status === 'pending') return res.status(409).json({ error: `Room ${houseNo} is reserved by a pending application. Refresh the room list and choose another room.` });
       if (await tenants.findOne({ idNumber: idNumber, status: { $in: ['pending', 'accepted'] } })) return res.status(409).json({ error: 'An active application already exists for this ID number.' });
-      const tenant = { id: Date.now() * 1000 + Math.floor(Math.random() * 1000), name, idNumber, email, phone: phone.startsWith('0') ? '+254' + phone.slice(1) : phone, notificationPreferences: { payments: true, charges: true, account: true }, houseNo, dateEntered: body.dateEntered, monthlyRent: expected, expected, paid: 0, feesTotal: 0, balance: expected, status: 'pending', paymentHistory: [], feeHistory: [], timestamp: new Date().toLocaleString(), createdAt: new Date() };
+      const tenant = { id: Date.now() * 1000 + Math.floor(Math.random() * 1000), name, idNumber, email, phone, notificationPreferences: { payments: true, charges: true, account: true }, houseNo, dateEntered: body.dateEntered, monthlyRent: expected, expected, paid: 0, feesTotal: 0, balance: expected, status: 'pending', paymentHistory: [], feeHistory: [], timestamp: new Date().toLocaleString(), createdAt: new Date() };
       await tenants.insertOne(tenant);
       await notifyAdmins(db, { title: 'New tenant application', details: `${tenant.name} applied for room ${tenant.houseNo}. Tenant email: ${email || 'not provided'}.` });
       return res.status(201).json({ tenant: cleanTenant(tenant), emailNotificationsEnabled: Boolean(email) });

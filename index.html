@@ -470,25 +470,38 @@ function showToast(message, type='error', duration=4500){
   container.appendChild(toast);
   setTimeout(()=>{toast.style.opacity='0';toast.style.transition='opacity .2s';setTimeout(()=>toast.remove(),220);}, duration);
 }
-async function apiRequest(method, body, endpoint='/api/data'){
-  const response = await fetch(endpoint, {
-    method,
-    headers: {'Content-Type':'application/json'},
-    body: body ? JSON.stringify(body) : undefined
-  });
-  const contentType = response.headers.get('content-type') || '';
-  const raw = await response.text();
-  let payload;
-  try{ payload = JSON.parse(raw); }
-  catch(error){
-    if(raw.trim().startsWith('<!DOCTYPE') || raw.trim().startsWith('<')){
-      throw new Error('Vercel is serving the website HTML instead of /api/data. Redeploy the latest commit.');
-    }
-    throw new Error('The API returned an invalid response.');
+function explainClientError(error, fallback='The request could not be completed.'){
+  if(error?.name==='AbortError') return 'The request timed out. Check your connection and try again.';
+  if(error instanceof TypeError || /failed to fetch|networkerror|load failed/i.test(String(error?.message||''))) return 'Cannot reach SEGUTON right now. Check your internet connection and try again.';
+  return String(error?.message || fallback);
+}
+function statusFallback(status, context='request'){
+  if(status===400) return `The ${context} contains invalid or incomplete details.`;
+  if(status===401) return `Your ${context} could not be authenticated. Sign in again and retry.`;
+  if(status===403) return `You are not allowed to perform this ${context}.`;
+  if(status===404) return `The requested ${context} was not found.`;
+  if(status===409) return `This ${context} conflicts with a newer change. Refresh and try again.`;
+  if(status===429) return `Too many ${context} attempts. Wait a moment and try again.`;
+  if(status>=500) return `SEGUTON could not complete this ${context} because a server service is unavailable. Try again shortly.`;
+  return `${context[0].toUpperCase()+context.slice(1)} failed (HTTP ${status}).`;
+}
+async function parseApiResponse(response, context='request'){
+  const contentType=response.headers.get('content-type')||'';
+  const raw=await response.text();
+  let payload=null;
+  try{ payload=raw ? JSON.parse(raw) : null; }catch(error){
+    if(raw.trim().startsWith('<!DOCTYPE') || raw.trim().startsWith('<')) throw new Error(`SEGUTON returned a web page instead of the ${context} API response. Redeploy the latest Vercel commit and hard-refresh the browser.`);
+    throw new Error(`The ${context} API returned an invalid response. Check the deployment logs and try again.`);
   }
-  if(!response.ok) throw new Error(payload.error ? `${payload.error}${payload.hint ? ` ${payload.hint}` : ''}` : `API request failed (${response.status})`);
-  if(!contentType.includes('application/json')) throw new Error('The API did not return JSON. Redeploy the latest Vercel configuration.');
-  return payload;
+  if(!response.ok) throw new Error(payload?.error ? `${payload.error}${payload.hint ? ` ${payload.hint}` : ''}` : statusFallback(response.status,context));
+  if(!contentType.includes('application/json')) throw new Error(`The ${context} API did not return JSON. Redeploy the latest Vercel configuration.`);
+  return payload||{};
+}
+async function apiRequest(method, body, endpoint='/api/data'){
+  try{
+    const response = await fetch(endpoint, {method,headers: {'Content-Type':'application/json'},body: body ? JSON.stringify(body) : undefined});
+    return await parseApiResponse(response,endpoint.replace(/^\//,'').replace(/^api\//,''));
+  }catch(error){ throw new Error(explainClientError(error,'The data request could not be completed.')); }
 }
 async function loadPublicRooms(){
   try{
@@ -512,7 +525,8 @@ function tenantPortalRequest(body){
   const method=body?.method || 'POST';
   const payload={...body}; delete payload.method;
   return fetch('/api/tenant',{method,credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
-    .then(async response=>{ const payload=await response.json().catch(()=>({error:'Tenant login returned an invalid response.'})); if(!response.ok) throw new Error(payload.error||'Tenant account request failed.'); return payload; });
+    .then(response=>parseApiResponse(response,'tenant account'))
+    .catch(error=>{ throw new Error(explainClientError(error,'The tenant account request could not be completed.')); });
 }
 let tenantRestoreInProgress=false;
 async function restoreTenantSession(showError=false){
@@ -590,11 +604,19 @@ async function paymentRequest(endpoint, body, timeoutMs=30000){
   const timer=setTimeout(()=>controller.abort(),timeoutMs);
   try{
     const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:controller.signal});
-    const payload=await response.json().catch(()=>({error:'Payment service returned an invalid response.'}));
+    const contentType=response.headers.get('content-type')||'';
+    const raw=await response.text();
+    let payload;
+    try{ payload=raw?JSON.parse(raw):{}; }catch(error){
+      if(raw.trim().startsWith('<!DOCTYPE') || raw.trim().startsWith('<')) throw new Error('SEGUTON returned a web page instead of the M-Pesa API response. Redeploy the latest Vercel commit and hard-refresh the browser.');
+      throw new Error('The M-Pesa API returned an invalid response. Check the deployment logs and try again.');
+    }
+    if(!response.ok && !payload.error) payload.error=statusFallback(response.status,'M-Pesa payment');
+    if(response.ok && !contentType.includes('application/json')) throw new Error('The M-Pesa API did not return JSON. Redeploy the latest Vercel configuration.');
     return {response,payload};
   }catch(error){
     if(error.name==='AbortError') throw new Error('The payment service took too long to respond. Check your M-Pesa messages before trying again.');
-    throw error;
+    throw new Error(explainClientError(error,'The M-Pesa payment request could not be completed.'));
   }finally{ clearTimeout(timer); }
 }
 async function startTenantStkPayment(tenantId){
@@ -678,12 +700,10 @@ async function logoutTenantPortal(){
 }
 
 async function authRequest(method, body){
-  const response = await fetch('/api/auth', {method, credentials:'include', headers:{'Content-Type':'application/json'}, body:body ? JSON.stringify(body) : undefined});
-  const raw = await response.text();
-  let payload;
-  try{ payload = JSON.parse(raw); }catch(error){ throw new Error('Authentication API is not responding. Redeploy the latest Vercel commit.'); }
-  if(!response.ok) throw new Error(payload.error || 'Authentication request failed.');
-  return payload;
+  try{
+    const response = await fetch('/api/auth', {method, credentials:'include', headers:{'Content-Type':'application/json'}, body:body ? JSON.stringify(body) : undefined});
+    return await parseApiResponse(response,'administrator authentication');
+  }catch(error){ throw new Error(explainClientError(error,'The administrator authentication request could not be completed.')); }
 }
 function setAuthMessage(message, color='crimson'){
   const node=document.getElementById('authStatus'); if(node){node.innerText=message;node.style.color=color;}
