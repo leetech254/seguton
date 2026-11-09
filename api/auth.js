@@ -3,7 +3,7 @@ const { getDatabase, initializeDatabase } = require('../lib/database');
 const { hashPassword, verifyPassword, setSession, clearSession, readSession, requireAdmin } = require('../lib/auth');
 const { sendResendEmail, sendRequiredResendEmail, assertEmailConfiguration } = require('../lib/notifications');
 const { setSecurityHeaders, consumeRateLimit, clearRateLimit, rateLimitKey } = require('../lib/security');
-const { normalizeKenyanPhone } = require('../lib/phone');
+const { normalizeKenyanPhone, phoneVariants } = require('../lib/phone');
 
 function normalizeEmail(value) { return String(value || '').trim().toLowerCase(); }
 function validPassword(value) { return typeof value === 'string' && value.length >= 8; }
@@ -140,7 +140,7 @@ module.exports = async (req, res) => {
       const phone = normalizePhone(body.phone);
       const recoveryLimit = consumeRateLimit(rateLimitKey(req, 'admin-recover-email', phone || body.phone), 5, 15 * 60 * 1000);
       if (!recoveryLimit.allowed) return res.status(429).setHeader('Retry-After', recoveryLimit.retryAfter).json({ error: 'Too many recovery attempts. Try again later.' });
-      const candidates = phone ? await admins.find({ phone }).toArray() : [];
+      const candidates = phone ? await admins.find({ phone: { $in: phoneVariants(phone) } }).toArray() : [];
       let matched = null;
       for (const candidate of candidates) {
         if (await verifyPassword(String(body.password || ''), candidate.passwordHash)) { matched = candidate; break; }

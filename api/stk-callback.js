@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const { getDatabase, initializeDatabase } = require('../lib/database');
 const { notifyTenant, notifyAdmins } = require('../lib/notifications');
+const { normalizeKenyanPhone } = require('../lib/phone');
 
 function readRawBody(req) {
   if (Buffer.isBuffer(req.body)) return Promise.resolve(req.body);
@@ -68,8 +69,10 @@ module.exports = async (req, res) => {
       const amount = Number(payment.amount || data.amount || 0);
       const expectedReference = String(payment.accountReference || '');
       const receivedReference = String(data.accountReference || '');
-      const receivedPhone = String(data.phoneNumber || data.phone || '').replace(/^\+/, '');
-      if (!Number.isInteger(amount) || amount < 1 || (receivedReference && receivedReference !== expectedReference) || (receivedPhone && receivedPhone !== String(payment.phone || '').replace(/^\+/, ''))) {
+      const receivedPhoneRaw = String(data.phoneNumber || data.phone || '').trim();
+      const receivedPhone = receivedPhoneRaw ? normalizeKenyanPhone(receivedPhoneRaw, 'mpesa') : '';
+      const expectedPhone = normalizeKenyanPhone(payment.phone, 'mpesa');
+      if (!Number.isInteger(amount) || amount < 1 || (receivedReference && receivedReference !== expectedReference) || (receivedPhoneRaw && (!receivedPhone || receivedPhone !== expectedPhone))) {
         return res.status(422).json({ error: 'LeeTec payment reconciliation failed.' });
       }
       if (amount > Math.max(0, Number(tenant.expected || 0) - Number(tenant.paid || 0))) {

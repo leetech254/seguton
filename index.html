@@ -894,6 +894,7 @@ function updateBalance(){
 function normalizePhone(value){
   let compact=String(value||'').trim().replace(/[\s().-]/g,'');
   if(compact.startsWith('+')) compact=compact.slice(1);
+  if(compact.startsWith('00254')) compact=compact.slice(2);
   if(/^0[17]\d{8}$/.test(compact)) return '+254'+compact.slice(1);
   if(/^254[17]\d{8}$/.test(compact)) return '+'+compact;
   return null;
