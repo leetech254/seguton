@@ -13,7 +13,7 @@ A browser-based rental and tenant management system.
 - Payment updates for accepted tenants
 - Excel reporting for tenant records and summaries
 - Responsive interface with sync-status feedback
-- Branded responsive footer with SEGUTON ESTATE identity, secure-service tagline, and LeeTec attribution link
+- Branded responsive footer with SEGUTON ESTATE identity, secure-service tagline, and YEMTECH link
 - One-time administrator account setup with email, phone, and password
 - Login-first management entry: the setup form appears only when the server confirms that no administrator exists
 - Settings can add verified secondary administrator logins without replacing the primary account
