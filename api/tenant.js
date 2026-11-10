@@ -88,7 +88,7 @@ module.exports = async (req, res) => {
       const newPhone = normalizeKenyanPhone(body.newPhone || body.phone);
       const preferences = notificationPreferences(body.notificationPreferences === undefined ? matches[0].notificationPreferences : body.notificationPreferences);
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Enter a valid email address.' });
-      if (!newPhone) return res.status(400).json({ error: 'Enter a valid Kenyan phone number using +254 7xx/1xx or 07xx/01xx.' });
+      if (!newPhone) return res.status(400).json({ error: 'Enter a valid Kenyan phone number using +254, 00254, 254, 07xx/01xx, or a spaced/hyphenated version.' });
       const result = await tenantCollection.updateMany({ id: { $in: matches.map(record => record.id) } }, { $set: { email, phone: newPhone, notificationPreferences: preferences, updatedAt: new Date() } });
       setTenantSession(res, matches);
       await Promise.allSettled([

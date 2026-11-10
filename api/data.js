@@ -44,7 +44,7 @@ module.exports = async (req, res) => {
       if (!/^\d{8}$/.test(idNumber)) return res.status(400).json({ error: 'Kenyan National ID number must contain exactly 8 digits.' });
       const phone = normalizeKenyanPhone(body.phone);
       const email = String(body.email || '').trim().toLowerCase();
-      if (!phone) return res.status(400).json({ error: 'Enter a valid Kenyan phone number using +254 7xx/1xx, 254 7xx/1xx, or 07xx/01xx.' });
+      if (!phone) return res.status(400).json({ error: 'Enter a valid Kenyan phone number using +254, 00254, 254, 07xx/01xx, or a spaced/hyphenated version.' });
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Enter a valid email address.' });
       if (!Number.isFinite(submittedExpected) || submittedExpected !== expected || !Number.isFinite(paid) || paid < 0) return res.status(400).json({ error: 'The selected room rent is invalid. Refresh the room list and try again.' });
       if (paid !== 0) return res.status(400).json({ error: 'Registration payments must be completed through the M-Pesa payment prompt.' });

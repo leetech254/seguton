@@ -13,7 +13,7 @@ A browser-based rental and tenant management system.
 - Payment updates for accepted tenants
 - Excel reporting for tenant records and summaries
 - Responsive interface with sync-status feedback
-- Branded application footer: “All in one tech digital solutions” linked to the Lee Tech application
+- Branded responsive footer with SEGUTON ESTATE identity, secure-service tagline, and LeeTec attribution link
 - One-time administrator account setup with email, phone, and password
 - Login-first management entry: the setup form appears only when the server confirms that no administrator exists
 - Settings can add verified secondary administrator logins without replacing the primary account
