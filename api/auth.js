@@ -101,7 +101,12 @@ module.exports = async (req, res) => {
       const verification = createToken();
       const admin = { email, phone, passwordHash: await hashPassword(body.password), emailVerified: false, emailVerificationTokenHash: verification.hash, emailVerificationExpiresAt: verification.expiresAt, createdAt: new Date(), updatedAt: new Date() };
       try { await sendAdminVerification(req, admin, verification.token); } catch (error) { console.error('SEGUTON administrator verification delivery failed:', error.message); return res.status(502).json({ error: 'Verification email could not be sent. Confirm that your Resend API key, verified sender domain, and recipient address are correct, then try again.' }); }
-      await admins.insertOne(admin);
+      try {
+        await admins.insertOne(admin);
+      } catch (error) {
+        if (error?.code === 11000) return res.status(409).json({ error: 'Administrator account already exists. Use login instead.' });
+        throw error;
+      }
       return res.status(201).json({ verificationRequired: true, email, message: 'Administrator created. Check your email and open the verification link before signing in.' });
     }
 

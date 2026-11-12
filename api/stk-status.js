@@ -69,14 +69,20 @@ module.exports = async (req, res) => {
     const newPaid = Number(tenant.paid || 0) + amount;
     const receipt = statusPayload.mpesaReceipt || statusPayload.receipt || null;
     const update = await tenants.updateOne(
-      { id: tenant.id, stkPayments: { $elemMatch: { requestId, status: { $ne: 'SUCCESS' } } } },
+      { id: tenant.id, paid: { $lte: Number(tenant.expected || 0) - amount }, stkPayments: { $elemMatch: { requestId, status: { $ne: 'SUCCESS' } } } },
       {
         $inc: { paid: amount },
         $push: { paymentHistory: { amount, totalPaid: newPaid, date: new Date().toISOString(), source: 'LeeTec M-Pesa STK Push', receipt } },
         $set: { 'stkPayments.$.status': 'SUCCESS', 'stkPayments.$.receipt': receipt, 'stkPayments.$.completedAt': new Date() }
       }
     );
-    if (!update.modifiedCount) return res.status(200).json({ ok: true, status: 'SUCCESS', final: true, duplicate: true });
+    if (!update.modifiedCount) {
+      const current = await tenants.findOne({ id: tenant.id }, { projection: { paid: 1, expected: 1, stkPayments: 1 } });
+      const currentPayment = (current?.stkPayments || []).find(item => item.requestId === requestId);
+      if (currentPayment?.status === 'SUCCESS') return res.status(200).json({ ok: true, status: 'SUCCESS', final: true, duplicate: true });
+      await tenants.updateOne({ id: tenant.id, 'stkPayments.requestId': requestId, 'stkPayments.status': { $ne: 'SUCCESS' } }, { $set: { 'stkPayments.$.status': 'MANUAL_REVIEW', 'stkPayments.$.updatedAt': new Date() } });
+      return res.status(409).json({ error: 'Payment succeeded but could not be applied without exceeding the current balance. It was held for administrator review.' });
+    }
 
     const updated = await tenants.findOne({ id: tenant.id });
     if (updated) {

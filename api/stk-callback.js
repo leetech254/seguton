@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const { getDatabase, initializeDatabase } = require('../lib/database');
 const { notifyTenant, notifyAdmins } = require('../lib/notifications');
 const { normalizeKenyanPhone } = require('../lib/phone');
+const { setSecurityHeaders } = require('../lib/security');
 
 function readRawBody(req) {
   if (Buffer.isBuffer(req.body)) return Promise.resolve(req.body);
@@ -24,6 +25,8 @@ function validSignature(rawBody, supplied) {
 }
 
 module.exports = async (req, res) => {
+  if (!setSecurityHeaders(req, res, 'POST,OPTIONS')) return res.status(403).json({ error: 'Origin is not allowed.' });
+  if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed.' });
   if (!process.env.LEETEC_WEBHOOK_SECRET) return res.status(503).json({ error: 'LeeTec webhook verification is not configured.' });
 
@@ -60,7 +63,7 @@ module.exports = async (req, res) => {
     const finalStatus = ['SUCCESS', 'FAILED', 'CANCELLED', 'MANUAL_REVIEW'].includes(status) ? status : 'PENDING';
     if (!isSuccess && finalStatus === 'PENDING') return res.status(200).json({ ok: true, pending: true });
 
-    const paymentFilter = {
+      const paymentFilter = {
       id: tenant.id,
       stkPayments: { $elemMatch: { ...(requestId ? { requestId } : { checkoutRequestId }), status: { $ne: 'SUCCESS' } } }
     };
@@ -80,12 +83,20 @@ module.exports = async (req, res) => {
         return res.status(409).json({ error: 'Payment exceeds the current tenant balance and was held for administrator review.' });
       }
       const newPaid = Number(tenant.paid || 0) + amount;
-      const paymentUpdate = await tenants.updateOne(paymentFilter, {
+      const paymentUpdate = await tenants.updateOne({ ...paymentFilter, paid: { $lte: Number(tenant.expected || 0) - amount } }, {
         $inc: { paid: amount },
         $push: { paymentHistory: { amount, totalPaid: newPaid, date: new Date().toISOString(), source: 'LeeTec M-Pesa STK Push', receipt: data.mpesaReceipt || data.receipt || null } },
         $set: { 'stkPayments.$.status': 'SUCCESS', 'stkPayments.$.receipt': data.mpesaReceipt || data.receipt || null, 'stkPayments.$.deliveryId': deliveryId, 'stkPayments.$.completedAt': new Date() }
       });
-      if (!paymentUpdate.modifiedCount) return res.status(200).json({ ok: true, duplicate: true });
+      if (!paymentUpdate.modifiedCount) {
+        const current = await tenants.findOne({ id: tenant.id }, { projection: { stkPayments: 1 } });
+        const currentPayment = (current?.stkPayments || []).find(item =>
+          (requestId && item.requestId === requestId) || (checkoutRequestId && item.checkoutRequestId === checkoutRequestId)
+        );
+        if (currentPayment?.status === 'SUCCESS') return res.status(200).json({ ok: true, duplicate: true });
+        await tenants.updateOne(paymentFilter, { $set: { 'stkPayments.$.status': 'MANUAL_REVIEW', 'stkPayments.$.updatedAt': new Date() } });
+        return res.status(409).json({ error: 'Payment exceeds the current balance and was held for administrator review.' });
+      }
       const updated = await tenants.findOne({ id: tenant.id });
       if (updated) {
         const balance = Math.max(0, Number(updated.expected || 0) - Number(updated.paid || 0));
